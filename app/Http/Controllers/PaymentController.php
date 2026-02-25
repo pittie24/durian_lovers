@@ -38,47 +38,79 @@ class PaymentController extends Controller
         }
 
         if (!$payment->snap_token) {
-            $payment->update([
-                'snap_token' => $midtrans->createSnapToken($order),
-            ]);
+            try {
+                $snapToken = $midtrans->createSnapToken($order);
+                $payment->update([
+                    'snap_token' => $snapToken,
+                ]);
+            } catch (\Exception $e) {
+                return redirect()->back()->with('error', 'Gagal mendapatkan token pembayaran: ' . $e->getMessage());
+            }
         }
 
-        // Placeholder redirect target: in production, redirect to Midtrans Snap.
-        return redirect('/tracking/' . $order->id)->with('success', 'Pembayaran diproses. Menunggu konfirmasi.');
+        // Redirect ke halaman payment untuk menampilkan popup Midtrans
+        return redirect()->route('pembayaran.show', $order)->with('success', 'Silakan lakukan pembayaran.');
     }
 
     public function webhook(Request $request)
     {
         $payload = $request->all();
+        $signature = $request->header('X-Signature') ?? '';
+
+        // Verifikasi signature key dari Midtrans
+        $serverKey = config('services.midtrans.server_key');
+        $computedSignature = hash('sha512', $payload['order_id'] . $payload['status_code'] . $payload['gross_amount'] . $serverKey);
+
+        if ($signature !== $computedSignature) {
+            Log::warning('Midtrans webhook invalid signature', $payload);
+            return response()->json(['message' => 'Invalid signature'], 403);
+        }
 
         $orderId = $payload['order_id'] ?? null;
         $transactionStatus = $payload['transaction_status'] ?? null;
+        $fraudStatus = $payload['fraud_status'] ?? null;
 
         if (!$orderId) {
             return response()->json(['message' => 'Invalid payload'], 400);
         }
 
+        // Cari order berdasarkan ID (karena order_id kita menggunakan ID lokal)
         $order = Order::find($orderId);
+
         if (!$order) {
             return response()->json(['message' => 'Order not found'], 404);
         }
 
-        $statusMap = [
-            'capture' => 'PESANAN_DITERIMA',
-            'settlement' => 'SEDANG_DIPROSES',
-            'pending' => 'MENUNGGU_PEMBAYARAN',
-            'deny' => 'DIBATALKAN',
-            'cancel' => 'DIBATALKAN',
-            'expire' => 'DIBATALKAN',
-        ];
+        // Tentukan status berdasarkan response Midtrans
+        $orderStatus = $order->status;
+        $paymentStatus = strtoupper($transactionStatus ?? 'PENDING');
+
+        if ($fraudStatus === 'accept') {
+            if ($transactionStatus === 'capture') {
+                $orderStatus = 'PESANAN_DITERIMA';
+            } elseif ($transactionStatus === 'settlement') {
+                $orderStatus = 'SEDANG_DIPROSES';
+            }
+        } else {
+            $statusMap = [
+                'capture' => 'PESANAN_DITERIMA',
+                'settlement' => 'SEDANG_DIPROSES',
+                'pending' => 'MENUNGGU_PEMBAYARAN',
+                'deny' => 'DIBATALKAN',
+                'cancel' => 'DIBATALKAN',
+                'expire' => 'DIBATALKAN',
+            ];
+            $orderStatus = $statusMap[$transactionStatus] ?? $order->status;
+        }
 
         $order->update([
-            'status' => $statusMap[$transactionStatus] ?? $order->status,
+            'status' => $orderStatus,
         ]);
 
         if ($order->payment) {
             $order->payment->update([
-                'status' => strtoupper($transactionStatus ?? 'PENDING'),
+                'status' => $paymentStatus,
+                'payment_method' => $payload['payment_type'] ?? null,
             ]);
         }
 

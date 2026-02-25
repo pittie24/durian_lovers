@@ -21,9 +21,25 @@ class Order extends Model
         'total',
     ];
 
+    protected $casts = [
+        'subtotal' => 'integer',
+        'shipping_cost' => 'integer',
+        'total' => 'integer',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
     }
 
     public function items()
@@ -34,5 +50,15 @@ class Order extends Model
     public function payment()
     {
         return $this->hasOne(Payment::class);
+    }
+
+    public function getOrderNumberAttribute(): string
+    {
+        return 'ORD-' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
+    }
+
+    public function getTotalAmountAttribute(): int
+    {
+        return $this->total;
     }
 }
