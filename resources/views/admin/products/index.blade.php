@@ -1,6 +1,10 @@
 @extends('layouts.admin')
 
 @section('content')
+@php
+  use Illuminate\Support\Str;
+@endphp
+
 <div class="section-heading">
     <h2>Manajemen Produk</h2>
     <a href="/admin/produk/tambah" class="btn primary">
@@ -10,10 +14,19 @@
 
 <div class="grid cards">
     @foreach ($products as $product)
+        @php
+          $img = $product->image_url ?? '';
+          // kalau sudah http/https, pakai langsung. kalau tidak, pakai asset()
+          $imgSrc = Str::startsWith($img, ['http://','https://'])
+              ? $img
+              : asset(ltrim($img, '/'));
+        @endphp
+
         <div class="card product-card">
-            <img src="{{ $product->image_url }}"
+            <img src="{{ $imgSrc }}"
                  alt="{{ $product->name }}"
-                 onerror="this.src='https://via.placeholder.com/600x400?text=No+Image'">
+                 loading="lazy"
+                 onerror="this.onerror=null;this.src='{{ asset('images/products/placeholder.jpg') }}';">
 
             <div class="card-body">
                 <h4>{{ $product->name }}</h4>

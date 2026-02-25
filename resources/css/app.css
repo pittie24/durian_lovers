@@ -1,0 +1,55 @@
+/* ====== Metode Pembayaran (rapi seperti figma) ====== */
+.pay-list{
+  display: grid;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.pay-item{
+  display: grid;
+  grid-template-columns: 22px 1fr; /* radio | teks */
+  align-items: start;
+  gap: 14px;
+
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid #eee;
+  background: #fff;
+
+  cursor: pointer;
+  transition: .15s ease;
+}
+
+.pay-item:hover{
+  border-color: #e2d6bd;
+  box-shadow: 0 8px 18px rgba(0,0,0,.04);
+}
+
+.pay-item input[type="radio"]{
+  margin-top: 4px; /* sejajar dengan judul */
+}
+
+.pay-text{
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+
+.pay-title{
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.pay-sub{
+  font-size: 12px;
+  color:#6b7280;
+  line-height: 1.35;
+}
+
+/* aktif (opsional, biar mirip kartu pilihan) */
+.pay-item:has(input:checked){
+  background: #fff7e6;
+  border-color: #d79b2e;
+  box-shadow: 0 10px 20px rgba(215,155,46,.12);
+}

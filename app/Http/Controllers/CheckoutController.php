@@ -11,10 +11,17 @@ use Illuminate\Support\Facades\Auth;
 
 class CheckoutController extends Controller
 {
+    // Ongkir 10k hanya kalau "delivery"
+    private const SHIPPING_DELIVERY = 10000;
+
     public function index(Request $request)
     {
         $cart = $request->session()->get('cart', []);
-        $summary = $this->calculateSummary($cart);
+
+        // Default shipping_method untuk tampilan pertama kali
+        $shippingMethod = $request->get('shipping_method', 'delivery');
+
+        $summary = $this->calculateSummary($cart, $shippingMethod);
 
         return view('customer.checkout.index', [
             'cart' => $cart,
@@ -24,47 +31,61 @@ class CheckoutController extends Controller
 
     public function store(Request $request, MidtransService $midtrans)
     {
+        // Validasi dasar dulu
         $data = $request->validate([
-            'shipping_method' => ['required'],
-            'phone' => ['required', 'min:10'],
-            'address' => ['required'],
-            'payment_method' => ['required'],
+            'shipping_method' => ['required', 'in:delivery,pickup'],
+            'payment_method'  => ['required'],
+            'phone'           => ['nullable', 'min:10'],
+            'address'         => ['nullable'],
         ]);
+
+        // Kalau delivery, phone & address wajib
+        if ($data['shipping_method'] === 'delivery') {
+            $request->validate([
+                'phone'   => ['required', 'min:10'],
+                'address' => ['required'],
+            ]);
+        } else {
+            // pickup: kita amanin supaya tidak null
+            $data['phone'] = $data['phone'] ?? '-';
+            $data['address'] = $data['address'] ?? 'Ambil di Toko';
+        }
 
         $cart = $request->session()->get('cart', []);
         if (empty($cart)) {
             return redirect('/keranjang')->withErrors(['cart' => 'Keranjang masih kosong.']);
         }
 
-        $summary = $this->calculateSummary($cart);
+        // Hitung summary sesuai pilihan shipping_method
+        $summary = $this->calculateSummary($cart, $data['shipping_method']);
 
         $order = Order::create([
-            'user_id' => Auth::id(),
-            'status' => 'MENUNGGU_PEMBAYARAN',
-            'shipping_method' => $data['shipping_method'],
-            'payment_method' => $data['payment_method'],
-            'phone' => $data['phone'],
+            'user_id'          => Auth::id(),
+            'status'           => 'MENUNGGU_PEMBAYARAN',
+            'shipping_method'  => $data['shipping_method'],
+            'payment_method'   => $data['payment_method'],
+            'phone'            => $data['phone'],
             'shipping_address' => $data['address'],
-            'subtotal' => $summary['subtotal'],
-            'shipping_cost' => $summary['shipping'],
-            'total' => $summary['total'],
+            'subtotal'         => $summary['subtotal'],
+            'shipping_cost'    => $summary['shipping'],
+            'total'            => $summary['total'],
         ]);
 
         foreach ($cart as $item) {
             OrderItem::create([
-                'order_id' => $order->id,
+                'order_id'   => $order->id,
                 'product_id' => $item['id'],
-                'quantity' => $item['quantity'],
-                'price' => $item['price'],
-                'total' => $item['price'] * $item['quantity'],
+                'quantity'   => $item['quantity'],
+                'price'      => $item['price'],
+                'total'      => $item['price'] * $item['quantity'],
             ]);
         }
 
         $payment = Payment::create([
-            'order_id' => $order->id,
-            'provider' => 'midtrans',
-            'status' => 'PENDING',
-            'payment_method' => $data['payment_method'],
+            'order_id'        => $order->id,
+            'provider'        => 'midtrans',
+            'status'          => 'PENDING',
+            'payment_method'  => $data['payment_method'],
         ]);
 
         $snapToken = $midtrans->createSnapToken($order);
@@ -75,17 +96,23 @@ class CheckoutController extends Controller
         return redirect('/pembayaran/' . $order->id);
     }
 
-    private function calculateSummary(array $cart): array
+    /**
+     * @param array $cart
+     * @param string $shippingMethod delivery|pickup
+     */
+    private function calculateSummary(array $cart, string $shippingMethod = 'delivery'): array
     {
         $subtotal = 0;
         foreach ($cart as $item) {
             $subtotal += $item['price'] * $item['quantity'];
         }
 
+        $shipping = ($shippingMethod === 'delivery') ? self::SHIPPING_DELIVERY : 0;
+
         return [
             'subtotal' => $subtotal,
-            'shipping' => 0,
-            'total' => $subtotal,
+            'shipping' => $shipping,
+            'total'    => $subtotal + $shipping,
         ];
     }
 }

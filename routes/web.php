@@ -17,57 +17,84 @@ use App\Http\Controllers\RatingController;
 use App\Http\Controllers\TrackingController;
 use Illuminate\Support\Facades\Route;
 
+// ================== GUEST ==================
 Route::get('/', [GuestController::class, 'landing']);
 
+// ================== CUSTOMER AUTH ==================
 Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [CustomerAuthController::class, 'login']);
 Route::get('/register', [CustomerAuthController::class, 'showRegister']);
 Route::post('/register', [CustomerAuthController::class, 'register']);
-Route::post('/logout', [CustomerAuthController::class, 'logout']);
+Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
 
+// ================== CUSTOMER AREA ==================
 Route::middleware('auth')->group(function () {
-    Route::get('/produk', [ProductController::class, 'index']);
-    Route::get('/produk/{product}', [ProductController::class, 'show']);
 
-    Route::get('/keranjang', [CartController::class, 'index']);
-    Route::post('/keranjang/tambah', [CartController::class, 'add']);
-    Route::post('/keranjang/ubah-qty', [CartController::class, 'update']);
-    Route::post('/keranjang/hapus', [CartController::class, 'remove']);
+    // Produk
+    Route::get('/produk', [ProductController::class, 'index'])->name('produk.index');
+    Route::get('/produk/{product}', [ProductController::class, 'show'])->name('produk.show');
 
-    Route::get('/checkout', [CheckoutController::class, 'index']);
-    Route::post('/checkout', [CheckoutController::class, 'store']);
+    // Keranjang
+    Route::get('/keranjang', [CartController::class, 'index'])->name('keranjang.index');
 
-    Route::get('/pembayaran/{order}', [PaymentController::class, 'show']);
-    Route::post('/pembayaran/{order}/lanjut', [PaymentController::class, 'proceed']);
+    // Route lama (tetap dibiarkan kalau ada form lain yang memakai)
+    Route::post('/keranjang/tambah', [CartController::class, 'add'])->name('keranjang.tambah.legacy');
 
-    Route::get('/tracking/{order}', [TrackingController::class, 'show']);
-    Route::get('/riwayat', [HistoryController::class, 'index']);
+    // Route baru: /keranjang/tambah/{product} (POST)
+    Route::post('/keranjang/tambah/{product}', [CartController::class, 'add'])->name('keranjang.tambah');
 
-    Route::get('/rating/{orderItem}', [RatingController::class, 'create']);
-    Route::post('/rating/{orderItem}', [RatingController::class, 'store']);
+    Route::post('/keranjang/ubah-qty', [CartController::class, 'update'])->name('keranjang.updateQty');
+    Route::post('/keranjang/hapus', [CartController::class, 'remove'])->name('keranjang.remove');
+
+    // Checkout
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+
+    // Pembayaran
+    Route::get('/pembayaran/{order}', [PaymentController::class, 'show'])->name('pembayaran.show');
+    Route::post('/pembayaran/{order}/lanjut', [PaymentController::class, 'proceed'])->name('pembayaran.proceed');
+
+    // Tracking + Riwayat
+    Route::get('/tracking/{order}', [TrackingController::class, 'show'])->name('tracking.show');
+    Route::get('/riwayat', [HistoryController::class, 'index'])->name('riwayat.index');
+
+    // ✅ RATING (ini yang dipakai tombol "Ubah Rating")
+    // Penting: link tombol harus mengarah ke /rating/{orderItem}
+    Route::get('/rating/{orderItem}', [RatingController::class, 'create'])->name('rating.create');
+    Route::post('/rating/{orderItem}', [RatingController::class, 'store'])->name('rating.store');
 });
 
-Route::post('/payment/midtrans/webhook', [PaymentController::class, 'webhook']);
+// Webhook Midtrans (di luar auth)
+Route::post('/payment/midtrans/webhook', [PaymentController::class, 'webhook'])->name('midtrans.webhook');
 
+// ================== ADMIN AUTH ==================
 Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
-Route::post('/admin/login', [AdminAuthController::class, 'login']);
-Route::post('/admin/logout', [AdminAuthController::class, 'logout']);
+Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
+Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 
-Route::prefix('admin')->middleware('auth:admin')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index']);
+// ================== ADMIN AREA ==================
+Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
-    Route::get('/produk', [AdminProductController::class, 'index']);
-    Route::get('/produk/tambah', [AdminProductController::class, 'create']);
-    Route::post('/produk', [AdminProductController::class, 'store']);
-    Route::get('/produk/{product}/edit', [AdminProductController::class, 'edit']);
-    Route::post('/produk/{product}', [AdminProductController::class, 'update']);
-    Route::delete('/produk/{product}', [AdminProductController::class, 'destroy']);
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
-    Route::get('/pesanan', [AdminOrderController::class, 'index']);
-    Route::get('/pesanan/{order}', [AdminOrderController::class, 'show']);
-    Route::post('/pesanan/{order}/status', [AdminOrderController::class, 'updateStatus']);
+    // Produk
+    Route::get('/produk', [AdminProductController::class, 'index'])->name('admin.produk.index');
+    Route::get('/produk/tambah', [AdminProductController::class, 'create'])->name('admin.produk.create');
+    Route::post('/produk', [AdminProductController::class, 'store'])->name('admin.produk.store');
+    Route::get('/produk/{product}/edit', [AdminProductController::class, 'edit'])->name('admin.produk.edit');
+    Route::post('/produk/{product}', [AdminProductController::class, 'update'])->name('admin.produk.update');
+    Route::delete('/produk/{product}', [AdminProductController::class, 'destroy'])->name('admin.produk.destroy');
 
-    Route::get('/laporan', [ReportController::class, 'index']);
-    Route::get('/pelanggan', [AdminCustomerController::class, 'index']);
-    Route::get('/pelanggan/{customer}', [AdminCustomerController::class, 'show']);
+    // Pesanan
+    Route::get('/pesanan', [AdminOrderController::class, 'index'])->name('admin.pesanan.index');
+    Route::get('/pesanan/{order}', [AdminOrderController::class, 'show'])->name('admin.pesanan.show');
+    Route::post('/pesanan/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('admin.pesanan.status');
+
+    // Laporan + Export
+    Route::get('/laporan', [ReportController::class, 'index'])->name('admin.laporan.index');
+    Route::get('/laporan/export', [ReportController::class, 'exportCsv'])->name('admin.laporan.export');
+
+    // Pelanggan
+    Route::get('/pelanggan', [AdminCustomerController::class, 'index'])->name('admin.pelanggan.index');
+    Route::get('/pelanggan/{customer}', [AdminCustomerController::class, 'show'])->name('admin.pelanggan.show');
 });

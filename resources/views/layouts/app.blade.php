@@ -9,23 +9,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/app.css">
 </head>
+
 <body class="theme-cream">
     <header class="navbar">
         <div class="container nav-inner">
             <a href="/" class="logo">Durian Lovers</a>
-            <nav class="nav-links">
+
+            <!-- tombol hamburger (muncul di mobile) -->
+            <button class="nav-toggle" type="button" aria-label="Toggle menu" onclick="toggleNav()">
+                <span></span><span></span><span></span>
+            </button>
+
+            <nav class="nav-links" id="navMenu">
                 @auth
-                    <a href="/produk">Produk</a>
-                    <a href="/riwayat">Riwayat</a>
-                    <a href="/keranjang">Keranjang</a>
+                    <a href="/produk" class="{{ request()->is('produk*') ? 'active' : '' }}">Produk</a>
+                    <a href="/riwayat" class="{{ request()->is('riwayat*') ? 'active' : '' }}">Riwayat</a>
+                    <a href="/keranjang" class="{{ request()->is('keranjang*') ? 'active' : '' }}">Keranjang</a>
+
                     <span class="nav-user">Halo, {{ auth()->user()->name }}</span>
+
                     <form action="/logout" method="POST" class="inline-form">
                         @csrf
                         <button type="submit" class="link-button">Logout</button>
                     </form>
                 @else
-                    <a href="/login">Login</a>
-                    <a href="/register">Daftar</a>
+                    <a href="/login" class="{{ request()->is('login') ? 'active' : '' }}">Login</a>
+                    <a href="/register" class="{{ request()->is('register') ? 'active' : '' }}">Daftar</a>
                 @endauth
             </nav>
         </div>
@@ -41,5 +50,12 @@
             © 2024 Durian Lovers. Sistem Informasi Penjualan Berbasis Web.
         </div>
     </footer>
+
+    <script>
+        function toggleNav() {
+            const menu = document.getElementById('navMenu');
+            menu.classList.toggle('open');
+        }
+    </script>
 </body>
 </html>

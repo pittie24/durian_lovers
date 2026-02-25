@@ -20,17 +20,22 @@ class AdminAuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (Auth::guard('admin')->attempt($credentials)) {
+        // Pakai guard default (web) karena admin kamu tersimpan di tabel users
+        if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
             return redirect()->intended('/admin/dashboard');
         }
 
-        return back()->withErrors(['email' => 'Email atau password admin tidak valid.'])->onlyInput('email');
+        return back()
+            ->withErrors(['email' => 'Email atau password admin tidak valid.'])
+            ->onlyInput('email');
     }
 
     public function logout(Request $request)
     {
-        Auth::guard('admin')->logout();
+        // Logout dari guard default (web)
+        Auth::logout();
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
