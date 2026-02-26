@@ -58,8 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/tracking/{order}', [TrackingController::class, 'show'])->name('tracking.show');
     Route::get('/riwayat', [HistoryController::class, 'index'])->name('riwayat.index');
 
-    // ✅ RATING (ini yang dipakai tombol "Ubah Rating")
-    // Penting: link tombol harus mengarah ke /rating/{orderItem}
+    // ✅ RATING
     Route::get('/rating/{orderItem}', [RatingController::class, 'create'])->name('rating.create');
     Route::post('/rating/{orderItem}', [RatingController::class, 'store'])->name('rating.store');
 });
@@ -93,6 +92,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // Laporan + Export
     Route::get('/laporan', [ReportController::class, 'index'])->name('admin.laporan.index');
     Route::get('/laporan/export', [ReportController::class, 'exportCsv'])->name('admin.laporan.export');
+    Route::get('/laporan/export-html', [ReportController::class, 'exportHtml'])->name('admin.laporan.exportHtml');
 
     // Pelanggan
     Route::get('/pelanggan', [AdminCustomerController::class, 'index'])->name('admin.pelanggan.index');

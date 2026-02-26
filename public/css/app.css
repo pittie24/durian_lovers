@@ -2565,3 +2565,378 @@ textarea {
         width: 100%;
     }
 }
+
+/* ===============================
+   REPORT PAGE (LAPORAN) - DREAM UI
+   Paste at VERY BOTTOM of public/css/app.css
+   =============================== */
+
+.report-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin: 6px 0 16px;
+}
+
+.report-h1{
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+/* filter card */
+.report-filter{
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.06);
+  margin-bottom: 18px;
+}
+
+.filter-title{
+  font-weight: 800;
+  font-size: 13px;
+  color: #111827;
+  margin-bottom: 10px;
+}
+
+.filter-quick{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom: 12px;
+}
+
+.chip{
+  border: 0;
+  background: #eef2f7;
+  color:#111827;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor:pointer;
+}
+.chip:hover{ filter: brightness(.98); }
+
+.filter-form{
+  display:grid;
+  grid-template-columns: 1fr 1fr 220px auto;
+  gap: 12px;
+  align-items:end;
+}
+
+.filter-form .field label{
+  display:block;
+  font-size: 12px;
+  font-weight: 800;
+  color:#64748b;
+  margin-bottom: 6px;
+}
+
+.filter-form input,
+.filter-form select{
+  width:100%;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.filter-form .actions{ display:flex; }
+.filter-form .actions .btn{ height: 42px; }
+
+/* stats */
+.report-stats-grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.report-stat{
+  border-radius: 14px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.06);
+  border: 1px solid rgba(15,23,42,.04);
+}
+
+.report-stat .stat-label{
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+.report-stat .stat-value{
+  font-size: 22px;
+  font-weight: 900;
+  color:#111827;
+}
+
+/* charts */
+.report-charts-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.panel-title{
+  font-size: 13px;
+  font-weight: 900;
+  color:#0f172a;
+  margin-bottom: 10px;
+}
+
+.chart-wrap{
+  height: 240px;
+}
+.chart-wrap.tall{ height: 260px; }
+
+.report-wide{
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.06);
+  margin-bottom: 18px;
+}
+
+/* table */
+.table-wrap.clean{
+  overflow:hidden;
+  border-radius: 14px;
+  border: 1px solid #eef2f7;
+}
+
+.report-table{
+  width:100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.report-table thead th{
+  background:#fff;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef2f7;
+  font-weight: 900;
+  color:#111827;
+}
+
+.report-table tbody td{
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.report-table .right{ text-align:right; }
+
+.report-table .total-row td{
+  background: #fff9db;
+  border-bottom: 0;
+}
+
+.empty-row{
+  text-align:center;
+  padding: 28px 0 !important;
+  color:#6b7280;
+  font-weight: 800;
+}
+
+/* responsive */
+@media (max-width: 1024px){
+  .filter-form{ grid-template-columns: 1fr 1fr; }
+  .report-stats-grid{ grid-template-columns: 1fr 1fr; }
+  .report-charts-grid{ grid-template-columns: 1fr; }
+}
+
+/* =========================
+   RATING (STAR INPUT) - CUSTOMER
+   tempel di PALING BAWAH app.css
+   ========================= */
+
+.rating-card{
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.rating-title{
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.rating-product{
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.rating-label{
+  margin: 12px 0 8px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.star-input{
+  display:inline-flex;
+  flex-direction: row-reverse; /* penting */
+  gap: 8px;
+  align-items:center;
+  padding: 10px 12px;
+  border: 1px solid #e7dcc8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.star-input input{
+  display:none;
+}
+
+.star-input label{
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  color: #d1d5db; /* abu */
+  user-select:none;
+  transition: transform .08s ease;
+}
+
+.star-input label::before{
+  content: "★";
+}
+
+.star-input label:hover{
+  transform: scale(1.08);
+}
+
+/* hover: bintang yang dihover + semua di kirinya (karena reverse) */
+.star-input label:hover,
+.star-input label:hover ~ label{
+  color: #f59e0b; /* kuning */
+}
+
+/* selected */
+.star-input input:checked ~ label{
+  color: #f59e0b;
+}
+
+.rating-help{
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.rating-textarea{
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #e7dcc8;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.rating-actions{
+  margin-top: 14px;
+}
+
+.rating-error{
+  margin-top: 8px;
+  font-size: 12px;
+  color: #b42318;
+  font-weight: 700;
+}
+
+/* =========================
+   RATING (DISPLAY/READONLY STARS)
+   tempel di PALING BAWAH app.css
+   ========================= */
+
+.stars-display{
+  display:inline-flex;
+  align-items:center;
+  gap: 3px;
+  line-height: 1;
+}
+
+.stars-display .star{
+  font-size: 16px;
+  color: #d1d5db;            /* abu */
+}
+
+.stars-display .star.on{
+  color: #f59e0b;            /* kuning */
+}
+
+.stars-display .stars-date{
+  margin-left: 10px;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+/* =========================
+   STARS (AVG + REVIEW + RELATED)
+   ========================= */
+.stars{
+  display:inline-flex;
+  align-items:center;
+  gap: 4px;
+  line-height: 1;
+}
+
+.stars .star{
+  color: #cbd5e1;            /* abu */
+  font-size: 14px;
+}
+
+.stars-sm .star{ font-size: 13px; }
+.stars-md .star{ font-size: 16px; }
+
+/* bintang aktif */
+.stars .star.on{
+  color: #f59e0b;            /* kuning */
+}
+
+/* setengah bintang (efek sederhana) */
+.stars .star.half{
+  background: linear-gradient(90deg, #f59e0b 50%, #cbd5e1 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* rating di kartu produk terkait */
+.rating-stars{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+}
+.rating-stars .rating-num{
+  font-weight: 800;
+  font-size: 12px;
+  color: #111827;
+}
+
+/* =========================
+   DETAIL PRODUCT IMAGE SIZE
+   ========================= */
+.pd-media { padding: 14px; }
+.pd-img{
+  width: 100%;
+  height: 340px;
+  object-fit: cover;
+  border-radius: 18px;
+  display: block;
+}
+
+/* Tombol disabled stok habis */
+.pd-add[disabled]{
+  opacity: .6;
+  cursor: not-allowed;
+}
+.pd-out{
+  margin-top: 10px;
+  font-size: 13px;
+  color: #b45309;
+}
+
+/* Spacing Produk Terkait */
+.pd-related { margin-top: 22px; }
+.related-cards { margin-top: 10px; }
