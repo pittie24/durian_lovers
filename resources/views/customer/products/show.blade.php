@@ -11,22 +11,25 @@
 
   $backUrl = url('/produk');
 
-  // ✅ FIX: route keranjang kamu POST /keranjang/tambah (tanpa /{id})
+  // route keranjang POST /keranjang/tambah
   $addToCartUrl = url('/keranjang/tambah');
 
-  $ratingAvg   = $product->rating_avg ?? 0;
-  $soldCount   = $product->sold_count ?? 0;
-  $ratingCount = $product->rating_count ?? 0;
-  $stock       = $product->stock ?? 0;
+  $ratingAvg   = (float) ($product->rating_avg ?? 0);
+  $soldCount   = (int) ($product->sold_count ?? 0);
+  $ratingCount = (int) ($product->rating_count ?? 0);
+  $stock       = (int) ($product->stock ?? 0);
 
   $desc   = $product->description ?? $product->deskripsi ?? null;
   $weight = $product->weight ?? $product->berat ?? null;
 
-  // reviews (kompatibel dengan variabel lama)
+  // reviews
   $reviews = $reviews ?? $ratings ?? collect();
 
-  // related products (kalau controller belum kirim, tetap aman)
+  // related products
   $relatedProducts = $relatedProducts ?? collect();
+
+  // rating avg untuk bintang (dibulatkan ke 0.5)
+  $avgRounded = round($ratingAvg * 2) / 2; // contoh 4.2 -> 4.0, 4.3 -> 4.5
 @endphp
 
 <div class="product-detail-page">
@@ -53,7 +56,19 @@
       <h1 class="pd-title">{{ $product->name }}</h1>
 
       <div class="pd-meta">
-        <span class="pd-star">★</span>
+        {{-- STAR DISPLAY (AVG) --}}
+        <div class="stars stars-sm" aria-label="Rating rata-rata {{ number_format($ratingAvg, 1) }} dari 5">
+          @for($i=1;$i<=5;$i++)
+            @php
+              // penuh jika i <= avgRounded
+              $full = ($i <= floor($avgRounded));
+              // setengah jika belum penuh dan i == floor(avgRounded)+1 dan ada .5
+              $half = (!$full && ($i == floor($avgRounded) + 1) && (fmod($avgRounded, 1.0) == 0.5));
+            @endphp
+            <span class="star {{ $full ? 'on' : '' }} {{ $half ? 'half' : '' }}">★</span>
+          @endfor
+        </div>
+
         <span class="pd-meta-text">{{ number_format($ratingAvg, 1) }}</span>
 
         <span class="pd-dot">•</span>
@@ -82,7 +97,7 @@
 
         <div class="pd-mini">
           <div class="pd-mini-label">Stok Tersedia</div>
-          <div class="pd-mini-value">{{ $stock }}</div> {{-- ✅ tanpa unit --}}
+          <div class="pd-mini-value">{{ $stock }}</div>
         </div>
       </div>
 
@@ -90,7 +105,6 @@
       <form class="pd-cart" method="POST" action="{{ $addToCartUrl }}">
         @csrf
 
-        {{-- ✅ FIX: kirim product_id biar CartController tahu produk mana --}}
         <input type="hidden" name="product_id" value="{{ $product->id }}">
 
         <div class="pd-qty">
@@ -122,23 +136,35 @@
     <div class="pd-card pd-review-card">
       @forelse($reviews as $rev)
         @php
-          $stars = (int) ($rev->rating ?? 0);
+          // fleksibel: bisa stars / rating
+          $stars = (int) ($rev->stars ?? $rev->rating ?? 0);
+          $stars = max(0, min(5, $stars));
           $date = optional($rev->created_at)->format('d/m/Y');
+
           $text = $rev->comment ?? $rev->ulasan ?? '';
+          $text = trim((string) $text);
         @endphp
 
         <div class="review-row">
           <div class="review-stars">
-            @for($i=1;$i<=5;$i++)
-              <span class="{{ $i <= $stars ? 'on' : '' }}">★</span>
-            @endfor
+            <div class="stars stars-md" aria-label="Rating {{ $stars }} dari 5">
+              @for($i=1;$i<=5;$i++)
+                <span class="star {{ $i <= $stars ? 'on' : '' }}">★</span>
+              @endfor
+            </div>
             <span class="review-date">{{ $date }}</span>
           </div>
 
-          <div class="review-text">{{ $text }}</div>
+          @if($text !== '')
+            <div class="review-text">{{ $text }}</div>
+          @else
+            <div class="review-text muted">Tanpa komentar.</div>
+          @endif
         </div>
 
-        <div class="review-divider"></div>
+        @if(!$loop->last)
+          <div class="review-divider"></div>
+        @endif
       @empty
         <div class="review-empty">Belum ada ulasan untuk produk ini.</div>
       @endforelse
@@ -156,6 +182,9 @@
           $rpImgSrc = Str::startsWith($rpImg, ['http://','https://'])
               ? $rpImg
               : asset(ltrim($rpImg, '/'));
+
+          $rpAvg = (float) ($rp->rating_avg ?? 0);
+          $rpAvgRounded = round($rpAvg * 2) / 2;
         @endphp
 
         <a href="/produk/{{ $rp->id }}" class="card product-card">
@@ -166,13 +195,26 @@
               loading="lazy"
               onerror="this.onerror=null;this.src='{{ asset('images/products/placeholder.jpg') }}';"
             >
-            <span class="pill pill-red">{{ $rp->sold_count }} terjual</span>
+            <span class="pill pill-red">{{ (int)($rp->sold_count ?? 0) }} terjual</span>
           </div>
 
           <div class="card-body">
             <div class="row">
-              <div class="rating">★ {{ number_format($rp->rating_avg ?? 0, 1) }}</div>
+              {{-- STAR DISPLAY (RELATED) --}}
+              <div class="rating rating-stars" aria-label="Rating rata-rata {{ number_format($rpAvg, 1) }} dari 5">
+                <div class="stars stars-sm">
+                  @for($i=1;$i<=5;$i++)
+                    @php
+                      $full = ($i <= floor($rpAvgRounded));
+                      $half = (!$full && ($i == floor($rpAvgRounded) + 1) && (fmod($rpAvgRounded, 1.0) == 0.5));
+                    @endphp
+                    <span class="star {{ $full ? 'on' : '' }} {{ $half ? 'half' : '' }}">★</span>
+                  @endfor
+                </div>
+                <span class="rating-num">{{ number_format($rpAvg, 1) }}</span>
+              </div>
             </div>
+
             <div class="product-name">{{ $rp->name }}</div>
             <div class="price">Rp {{ number_format($rp->price ?? 0, 0, ',', '.') }}</div>
           </div>
@@ -197,31 +239,4 @@
     input.value = v;
   }
 </script>
-
-<style>
-  /* Gambar detail biar tidak kebesaran */
-  .pd-media { padding: 14px; }
-  .pd-img{
-    width: 100%;
-    height: 340px;          /* ✅ lebih kecil dari 420 */
-    object-fit: cover;
-    border-radius: 18px;
-    display: block;
-  }
-
-  /* Tombol disabled stok habis */
-  .pd-add[disabled]{
-    opacity: .6;
-    cursor: not-allowed;
-  }
-  .pd-out{
-    margin-top: 10px;
-    font-size: 13px;
-    color: #b45309;
-  }
-
-  /* Spacing Produk Terkait */
-  .pd-related { margin-top: 22px; }
-  .related-cards { margin-top: 10px; }
-</style>
 @endsection
