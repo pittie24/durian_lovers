@@ -35,7 +35,13 @@
       $items = ($order->items ?? []);
     @endphp
 
-    <div class="order-card">
+    @php
+      // Cek apakah order menunggu pembayaran
+      $canPay = Str::contains($statusRaw, ['menunggu', 'pending', 'belum']);
+    @endphp
+
+    <div class="order-card {{ $canPay ? 'order-card-clickable' : '' }}" 
+         @if($canPay) onclick="window.location.href='{{ route('pembayaran.show', $order->id) }}'" @endif>
 
       {{-- HEADER --}}
       <div class="order-head">

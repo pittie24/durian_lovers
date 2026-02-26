@@ -85,6 +85,7 @@ class PaymentController extends Controller
         $orderStatus = $order->status;
         $paymentStatus = strtoupper($transactionStatus ?? 'PENDING');
 
+        // Mapping status pembayaran ke status order
         if ($fraudStatus === 'accept') {
             if ($transactionStatus === 'capture') {
                 $orderStatus = 'PESANAN_DITERIMA';
@@ -101,6 +102,14 @@ class PaymentController extends Controller
                 'expire' => 'DIBATALKAN',
             ];
             $orderStatus = $statusMap[$transactionStatus] ?? $order->status;
+        }
+
+        // Jika pembayaran gagal/dibatalkan/expired, kembalikan stok
+        if (in_array($transactionStatus, ['deny', 'cancel', 'expire'])) {
+            foreach ($order->items as $item) {
+                \App\Models\Product::where('id', $item->product_id)
+                    ->increment('stock', $item->quantity);
+            }
         }
 
         $order->update([

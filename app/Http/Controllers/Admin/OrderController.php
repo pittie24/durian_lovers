@@ -52,8 +52,19 @@ public function index(Request $request)
             'status' => ['required'],
         ]);
 
+        $previousStatus = $order->status;
+        $newStatus = $data['status'];
+
+        // Jika status berubah menjadi DIBATALKAN, kembalikan stok
+        if ($newStatus === 'DIBATALKAN' && $previousStatus !== 'DIBATALKAN') {
+            foreach ($order->items as $item) {
+                \App\Models\Product::where('id', $item->product_id)
+                    ->increment('stock', $item->quantity);
+            }
+        }
+
         $order->update([
-            'status' => $data['status'],
+            'status' => $newStatus,
         ]);
 
         return back()->with('success', 'Status pesanan diperbarui.');

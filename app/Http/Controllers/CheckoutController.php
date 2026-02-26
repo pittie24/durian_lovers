@@ -56,6 +56,19 @@ class CheckoutController extends Controller
             return redirect('/keranjang')->withErrors(['cart' => 'Keranjang masih kosong.']);
         }
 
+        // Validasi stok untuk setiap item di keranjang
+        foreach ($cart as $item) {
+            $product = \App\Models\Product::find($item['id']);
+            if (!$product) {
+                return redirect('/keranjang')->withErrors(['stock' => 'Produk tidak ditemukan.']);
+            }
+            if ($product->stock < $item['quantity']) {
+                return redirect('/keranjang')->withErrors([
+                    'stock' => "Stok {$product->name} tidak mencukupi. Stok tersedia: {$product->stock}"
+                ]);
+            }
+        }
+
         // Hitung summary sesuai pilihan shipping_method
         $summary = $this->calculateSummary($cart, $data['shipping_method']);
 
@@ -79,6 +92,10 @@ class CheckoutController extends Controller
                 'price'      => $item['price'],
                 'total'      => $item['price'] * $item['quantity'],
             ]);
+
+            // Kurangi stok produk
+            \App\Models\Product::where('id', $item['id'])
+                ->decrement('stock', $item['quantity']);
         }
 
         $payment = Payment::create([

@@ -56,6 +56,9 @@
         @foreach (['PESANAN_DITERIMA','SEDANG_DIPROSES','SIAP_DIAMBIL_DIKIRIM','SELESAI'] as $status)
             <button type="submit" name="status" value="{{ $status }}" class="btn outline small">{{ str_replace('_', ' ', $status) }}</button>
         @endforeach
+        @if($order->status !== 'DIBATALKAN')
+            <button type="submit" name="status" value="DIBATALKAN" class="btn danger small">Batalkan Pesanan</button>
+        @endif
     </div>
 </form>
 @endsection
