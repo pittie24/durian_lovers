@@ -23,7 +23,7 @@ class MidtransService
     {
         $params = [
             'transaction_details' => [
-                'order_id' => $order->order_number,
+                'order_id' => $order->order_number . '-' . time(),
                 'gross_amount' => $order->total_amount,
             ],
             'customer_details' => [
@@ -35,6 +35,7 @@ class MidtransService
         ];
 
         try {
+            \Log::info('MIDTRANS order_id = ' . $params['transaction_details']['order_id']);
             $snapToken = Snap::getSnapToken($params);
             return $snapToken;
         } catch (\Exception $e) {
