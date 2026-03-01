@@ -11,6 +11,9 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
+        'customer_name',
+        'customer_email',
+        'customer_phone',
         'status',
         'shipping_method',
         'payment_method',
@@ -70,5 +73,23 @@ class Order extends Model
     public function getTotalAmountAttribute(): int
     {
         return $this->total;
+    }
+
+    public function getCustomerDisplayNameAttribute(): string
+    {
+        return $this->customer_name
+            ?: ($this->user?->name ?? 'Pelanggan');
+    }
+
+    public function getCustomerDisplayEmailAttribute(): string
+    {
+        return $this->customer_email
+            ?: ($this->user?->email ?? '-');
+    }
+
+    public function getCustomerDisplayPhoneAttribute(): string
+    {
+        return $this->customer_phone
+            ?: ($this->user?->phone ?? $this->phone ?? '-');
     }
 }

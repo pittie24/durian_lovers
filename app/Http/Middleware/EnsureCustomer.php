@@ -7,21 +7,15 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class EnsureAdmin
+class EnsureCustomer
 {
     public function handle(Request $request, Closure $next)
     {
-        if (!Auth::check()) {
-            return redirect('/admin/login');
-        }
+        $user = Auth::user();
 
-        if (!$this->isAdminEmail((string) Auth::user()->email)) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            return redirect('/admin/login')
-                ->withErrors(['email' => 'Hanya akun admin yang dapat mengakses halaman admin.']);
+        if ($user && $this->isAdminEmail($user->email)) {
+            return redirect('/admin/dashboard')
+                ->with('error', 'Akun admin tidak dapat mengakses halaman pelanggan.');
         }
 
         return $next($request);

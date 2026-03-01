@@ -5,9 +5,9 @@
 
 <div class="card">
     <div class="card-body">
-        <h3>{{ $customer->name }}</h3>
-        <p>{{ $customer->email }}</p>
-        <p>{{ $customer->phone }}</p>
+        <h3>{{ $customer->display_name }}</h3>
+        <p>{{ $customer->display_email }}</p>
+        <p>{{ $customer->display_phone }}</p>
         <p>{{ $customer->address }}</p>
     </div>
 </div>

@@ -102,30 +102,43 @@
       </div>
 
       {{-- Quantity + Add to cart --}}
-      <form class="pd-cart" method="POST" action="{{ $addToCartUrl }}">
-        @csrf
+      @auth
+        <form class="pd-cart" method="POST" action="{{ $addToCartUrl }}">
+          @csrf
 
-        <input type="hidden" name="product_id" value="{{ $product->id }}">
+          <input type="hidden" name="product_id" value="{{ $product->id }}">
 
-        <div class="pd-qty">
-          <div class="pd-label">Jumlah</div>
+          <div class="pd-qty">
+            <div class="pd-label">Jumlah</div>
 
-          <div class="qty-stepper">
-            <button type="button" class="qty-btn" onclick="qtyStep(-1)">−</button>
-            <input id="qty" class="qty-input" type="number" name="quantity" value="1" min="1" max="{{ max(1,$stock) }}">
-            <button type="button" class="qty-btn" onclick="qtyStep(1)">+</button>
+            <div class="qty-stepper">
+              <button type="button" class="qty-btn" onclick="qtyStep(-1)">−</button>
+              <input id="qty" class="qty-input" type="number" name="quantity" value="1" min="1" max="{{ max(1,$stock) }}">
+              <button type="button" class="qty-btn" onclick="qtyStep(1)">+</button>
+            </div>
           </div>
+
+          <button type="submit" class="pd-add" {{ $stock <= 0 ? 'disabled' : '' }}>
+            <span class="pd-cart-icon">🛒</span>
+            Tambah ke Keranjang
+          </button>
+
+          @if($stock <= 0)
+            <div class="pd-out">Stok habis.</div>
+          @endif
+        </form>
+      @else
+        <div class="pd-cart pd-cart-guest">
+          <div class="pd-label">Untuk membeli produk ini, silakan login atau daftar terlebih dahulu.</div>
+          <a href="{{ route('login') }}" class="pd-add">
+            <span class="pd-cart-icon">🛒</span>
+            Login untuk Membeli
+          </a>
+          <a href="/register" class="pd-guest-register">
+            Belum punya akun? Daftar di sini
+          </a>
         </div>
-
-        <button type="submit" class="pd-add" {{ $stock <= 0 ? 'disabled' : '' }}>
-          <span class="pd-cart-icon">🛒</span>
-          Tambah ke Keranjang
-        </button>
-
-        @if($stock <= 0)
-          <div class="pd-out">Stok habis.</div>
-        @endif
-      </form>
+      @endauth
     </div>
   </div>
 
@@ -226,6 +239,20 @@
   </div>
 
 </div>
+
+<style>
+  .pd-cart-guest{
+    display: grid;
+    gap: 12px;
+  }
+
+  .pd-guest-register{
+    text-align: center;
+    font-weight: 700;
+    color: #8f5a0a;
+    text-decoration: none;
+  }
+</style>
 
 <script>
   function qtyStep(delta){

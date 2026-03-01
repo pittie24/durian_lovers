@@ -6,7 +6,7 @@
         <h1>Selamat Datang di Toko Durian Lovers</h1>
         <p>Platform belanja online untuk produk durian terbaik: pancake durian, durian montong, ice cream durian, dan masih banyak lagi!</p>
         <div class="hero-actions">
-            <a href="/login" class="btn primary">Lihat Produk</a>
+            <a href="/produk" class="btn primary">Lihat Produk</a>
             <a href="/login" class="btn outline">Riwayat Pesanan</a>
         </div>
     </div>

@@ -10,6 +10,14 @@ use Illuminate\Support\Facades\Log;
 
 class HistoryController extends Controller
 {
+    private const STATUS_MAP = [
+        'MENUNGGU_PEMBAYARAN' => ['Menunggu Pembayaran', 'default'],
+        'SEDANG_DIPROSES' => ['Dikemas', 'process'],
+        'SIAP_DIAMBIL_DIKIRIM' => ['Dikirim', 'shipped'],
+        'SELESAI' => ['Selesai', 'done'],
+        'DIBATALKAN' => ['Dibatalkan', 'cancel'],
+    ];
+
     /**
      * Check payment status from Midtrans API for pending orders
      */
@@ -42,15 +50,15 @@ class HistoryController extends Controller
                                 'payment_method' => $transactionData['payment_type'] ?? $order->payment->payment_method,
                             ]);
                             
-                            // Update order status if payment successful - OTOMATIS SELESAI (Opsi B)
+                            // Selaraskan dengan alur admin: pembayaran sukses masuk ke tahap proses.
                             if (in_array($transactionStatus, ['settlement', 'capture'])) {
-                                $order->update(['status' => 'SELESAI']);
+                                $order->update(['status' => 'SEDANG_DIPROSES']);
                                 
                                 // Generate invoice if not exists
                                 if (!$order->invoice) {
                                     try {
                                         \App\Services\InvoiceGeneratorService::generate($order, $order->payment);
-                                    } catch (\Exception $e) {
+                                    } catch (\Throwable $e) {
                                         Log::error('Failed to generate invoice', [
                                             'order_id' => $order->id,
                                             'error' => $e->getMessage(),
@@ -104,8 +112,7 @@ class HistoryController extends Controller
                     });
                 }
 
-                // ===== NORMALISASI STATUS =====
-                $order->status = strtolower($order->status ?? 'diproses');
+                $this->applyStatusPresentation($order);
 
                 return $order;
             });
@@ -137,9 +144,24 @@ class HistoryController extends Controller
                     });
                 }
 
+                $this->applyStatusPresentation($order);
+
                 return $order;
             });
 
         return view('customer.history.index', compact('orders'));
+    }
+
+    private function applyStatusPresentation(Order $order): void
+    {
+        $statusKey = strtoupper((string) ($order->status ?? 'MENUNGGU_PEMBAYARAN'));
+        [$label, $class] = self::STATUS_MAP[$statusKey] ?? [
+            ucwords(strtolower(str_replace('_', ' ', $statusKey))),
+            'default',
+        ];
+
+        $order->status_label = $label;
+        $order->status_class = $class;
+        $order->status_key = $statusKey;
     }
 }

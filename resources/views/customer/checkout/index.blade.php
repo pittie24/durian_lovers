@@ -7,6 +7,8 @@
   $subtotal = $summary['subtotal'] ?? 0;
   $shippingCost = ($shippingMethod === 'delivery') ? 10000 : 0;
   $total = $subtotal + $shippingCost;
+  $defaultPhone = old('phone', auth()->user()->phone ?? '');
+  $defaultAddress = old('address', auth()->user()->address ?? '');
 @endphp
 
 <div class="checkout-page">
@@ -47,11 +49,28 @@
         <div class="ck-card-title">Alamat Pengiriman</div>
         <div class="ck-field">
           <label class="ck-label">Nomor Telepon</label>
-          <input class="ck-input" type="text" name="phone" value="{{ old('phone') }}" placeholder="08xxxxxxxxxx" required>
+          <input
+            class="ck-input"
+            type="text"
+            name="phone"
+            value="{{ $defaultPhone }}"
+            placeholder="08xxxxxxxxxx"
+            required
+            id="phoneInput"
+            data-default-value="{{ $defaultPhone }}"
+          >
         </div>
         <div class="ck-field">
           <label class="ck-label">Alamat Lengkap</label>
-          <textarea class="ck-textarea" name="address" rows="3" placeholder="Tulis alamat lengkap..." required id="addressInput"></textarea>
+          <textarea
+            class="ck-textarea"
+            name="address"
+            rows="3"
+            placeholder="Tulis alamat lengkap..."
+            required
+            id="addressInput"
+            data-default-value="{{ $defaultAddress }}"
+          >{{ $defaultAddress }}</textarea>
         </div>
       </div>
 
@@ -245,9 +264,52 @@ function initShippingToggle() {
     const radios = document.querySelectorAll('input[name="shipping_method"]');
     const addressCard = document.getElementById('addressCard');
     const addressInput = document.getElementById('addressInput');
+    const phoneInput = document.getElementById('phoneInput');
+    const transferAmountInput = document.querySelector('input[name="transfer_amount"]');
     const shippingCostEl = document.getElementById('shippingCost');
     const totalAmountEl = document.getElementById('totalAmount');
     const subtotal = {{ $subtotal }};
+
+    function applyShippingState(method) {
+        const isPickup = method === 'pickup';
+        const total = isPickup ? subtotal : subtotal + 10000;
+        const defaultPhone = phoneInput ? (phoneInput.dataset.defaultValue || '') : '';
+        const defaultAddress = addressInput ? (addressInput.dataset.defaultValue || '') : '';
+
+        if (addressCard) {
+            addressCard.style.display = isPickup ? 'none' : 'block';
+        }
+
+        if (phoneInput) {
+            phoneInput.required = !isPickup;
+            if (isPickup) {
+                phoneInput.value = '';
+            } else if (!phoneInput.value.trim()) {
+                phoneInput.value = defaultPhone;
+            }
+        }
+
+        if (addressInput) {
+            addressInput.required = !isPickup;
+            if (isPickup) {
+                addressInput.value = '';
+            } else if (!addressInput.value.trim()) {
+                addressInput.value = defaultAddress;
+            }
+        }
+
+        if (shippingCostEl) {
+            shippingCostEl.textContent = isPickup ? 'Rp 0' : 'Rp 10.000';
+        }
+
+        if (totalAmountEl) {
+            totalAmountEl.textContent = 'Rp ' + total.toLocaleString('id-ID');
+        }
+
+        if (transferAmountInput) {
+            transferAmountInput.value = total;
+        }
+    }
     
     // Initial active state
     updateShippingActiveState();
@@ -256,23 +318,7 @@ function initShippingToggle() {
         // Update on change
         radio.addEventListener('change', function() {
             updateShippingActiveState();
-            
-            if (this.value === 'pickup') {
-                if (addressCard) addressCard.style.display = 'none';
-                if (addressInput) {
-                    addressInput.required = false;
-                    addressInput.value = '';
-                }
-                if (shippingCostEl) shippingCostEl.textContent = 'Rp 0';
-                if (totalAmountEl) totalAmountEl.textContent = 'Rp ' + subtotal.toLocaleString('id-ID');
-            } else {
-                if (addressCard) addressCard.style.display = 'block';
-                if (addressInput) {
-                    addressInput.required = true;
-                }
-                if (shippingCostEl) shippingCostEl.textContent = 'Rp 10.000';
-                if (totalAmountEl) totalAmountEl.textContent = 'Rp ' + (subtotal + 10000).toLocaleString('id-ID');
-            }
+            applyShippingState(this.value);
         });
         
         // Also update on click (for faster response)
@@ -283,11 +329,8 @@ function initShippingToggle() {
     
     // Trigger initial state for pickup
     const checked = document.querySelector('input[name="shipping_method"]:checked');
-    if (checked && checked.value === 'pickup') {
-        if (addressCard) addressCard.style.display = 'none';
-        if (addressInput) addressInput.required = false;
-        if (shippingCostEl) shippingCostEl.textContent = 'Rp 0';
-        if (totalAmountEl) totalAmountEl.textContent = 'Rp ' + subtotal.toLocaleString('id-ID');
+    if (checked) {
+        applyShippingState(checked.value);
     }
 }
 

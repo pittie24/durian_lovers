@@ -4,9 +4,9 @@
       <th>Nama</th>
       <th>Email</th>
       <th>Telepon</th>
-      <th>Total Pesanan</th>
-      <th>Total Pengeluaran</th>
-      <th>Terakhir Belanja</th>
+      <th class="center-col">Total Pesanan</th>
+      <th class="center-col">Total Pengeluaran</th>
+      <th class="center-col">Terakhir Belanja</th>
       <th class="th-actions">Aksi</th>
     </tr>
   </thead>
@@ -14,13 +14,13 @@
   <tbody>
     @forelse ($customers as $customer)
       <tr>
-        <td>{{ $customer->name }}</td>
-        <td class="muted">{{ $customer->email }}</td>
-        <td>{{ $customer->phone ?? '-' }}</td>
+        <td>{{ $customer->display_name }}</td>
+        <td class="muted">{{ $customer->display_email }}</td>
+        <td>{{ $customer->display_phone }}</td>
 
-        <td>{{ $customer->total_pesanan ?? 0 }}</td>
-        <td>Rp {{ number_format($customer->total_pengeluaran ?? 0, 0, ',', '.') }}</td>
-        <td>
+        <td class="center-col">{{ $customer->total_pesanan ?? 0 }}</td>
+        <td class="center-col">Rp {{ number_format($customer->total_pengeluaran ?? 0, 0, ',', '.') }}</td>
+        <td class="center-col">
           {{ $customer->terakhir_belanja
               ? \Carbon\Carbon::parse($customer->terakhir_belanja)->format('d M Y')
               : '-' }}
@@ -28,7 +28,7 @@
 
         <td class="td-actions">
           <a href="/admin/pelanggan/{{ $customer->id }}" class="link-detail">
-            <i class="bi bi-eye"></i> Detail
+            Detail
           </a>
         </td>
       </tr>

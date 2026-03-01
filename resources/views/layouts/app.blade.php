@@ -23,10 +23,10 @@
             <nav class="nav-links" id="navMenu">
                 @auth
                     <a href="/produk" class="{{ request()->is('produk*') ? 'active' : '' }}">Produk</a>
-                    <a href="/pembayaran" class="{{ request()->is('pembayaran*') ? 'active' : '' }}">Pembayaran</a>
-                    <a href="/riwayat" class="{{ request()->is('riwayat*') ? 'active' : '' }}">Riwayat</a>
-                    <a href="/status-pesanan" class="{{ request()->is('status-pesanan*') ? 'active' : '' }}">Status Pesanan</a>
                     <a href="/keranjang" class="{{ request()->is('keranjang*') ? 'active' : '' }}">Keranjang</a>
+                    <a href="/pembayaran" class="{{ request()->is('pembayaran*') ? 'active' : '' }}">Pembayaran</a>
+                    <a href="/status-pesanan" class="{{ request()->is('status-pesanan*') ? 'active' : '' }}">Status Pesanan</a>
+                    <a href="/riwayat" class="{{ request()->is('riwayat*') ? 'active' : '' }}">Riwayat</a>
 
                     <span class="nav-user">Halo, {{ auth()->user()->name }}</span>
 
@@ -36,14 +36,27 @@
                     </form>
                 @else
                     <a href="/login" class="{{ request()->is('login') ? 'active' : '' }}">Login</a>
-                    <a href="/register" class="{{ request()->is('register') ? 'active' : '' }}">Daftar</a>
+                    <a href="/register" class="{{ request()->is('register') ? 'active' : '' }}">Register</a>
                 @endauth
             </nav>
         </div>
     </header>
 
     <main class="container main-content">
-        @include('partials.flash')
+        @auth
+            <div class="page-backbar">
+                <button
+                    type="button"
+                    class="page-backbtn"
+                    onclick="goBackPage('{{ url('/produk') }}')"
+                >
+                    ← Kembali
+                </button>
+            </div>
+        @endauth
+        @unless(request()->is('login'))
+            @include('partials.flash')
+        @endunless
         @yield('content')
     </main>
 
@@ -54,10 +67,43 @@
     </footer>
 
     <script>
+        function goBackPage(fallbackUrl) {
+            if (window.history.length > 1 && document.referrer) {
+                window.history.back();
+                return;
+            }
+
+            window.location.href = fallbackUrl;
+        }
+
         function toggleNav() {
             const menu = document.getElementById('navMenu');
             menu.classList.toggle('open');
         }
     </script>
+
+    <style>
+        .page-backbar {
+            margin-bottom: 18px;
+        }
+
+        .page-backbtn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border: 1px solid rgba(183, 121, 31, 0.24);
+            border-radius: 999px;
+            background: linear-gradient(135deg, #fff8eb, #fffdf8);
+            color: #8f5a0a;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 8px 16px rgba(180, 128, 23, 0.08);
+        }
+
+        .page-backbtn:hover {
+            background: linear-gradient(135deg, #fff1d6, #fff8eb);
+        }
+    </style>
 </body>
 </html>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -19,6 +20,12 @@ class AdminAuthController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
+
+        if (!$this->isAdminEmail($credentials['email'])) {
+            return back()
+                ->withErrors(['email' => 'Hanya akun admin yang dapat mengakses halaman admin.'])
+                ->onlyInput('email');
+        }
 
         // Pakai guard default (web) karena admin kamu tersimpan di tabel users
         if (Auth::attempt($credentials)) {
@@ -40,5 +47,11 @@ class AdminAuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/admin/login');
+    }
+
+    private function isAdminEmail(string $email): bool
+    {
+        return Admin::where('email', $email)->exists()
+            || strcasecmp($email, 'admin@durianlovers.com') === 0;
     }
 }

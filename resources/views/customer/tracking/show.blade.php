@@ -3,22 +3,26 @@
 @section('content')
 <h2>Status Pesanan</h2>
 
-<div class="timeline">
-    @php
-        $labels = [
-            1 => 'Pesanan Diterima',
-            2 => 'Sedang Diproses',
-            3 => 'Siap Diambil/Dikirim',
-            4 => 'Selesai',
-        ];
-    @endphp
-    @foreach ($labels as $step => $label)
-        <div class="timeline-step {{ $currentStep >= $step ? 'active' : '' }}">
-            <span class="dot"></span>
-            <span>{{ $label }}</span>
-        </div>
-    @endforeach
-</div>
+@if($order->status !== 'DIBATALKAN')
+    <div class="timeline">
+        @php
+            $labels = [
+                1 => 'Pesanan Diterima',
+                2 => 'Sedang Diproses',
+                3 => 'Siap Diambil/Dikirim',
+                4 => 'Selesai',
+            ];
+        @endphp
+        @foreach ($labels as $step => $label)
+            <div class="timeline-step {{ $currentStep >= $step ? 'active' : '' }}">
+                <span class="dot"></span>
+                <span>{{ $label }}</span>
+            </div>
+        @endforeach
+    </div>
+@else
+    <div class="status-badge danger" style="margin-bottom: 16px;">Pesanan dibatalkan, tahapan proses tidak ditampilkan.</div>
+@endif
 
 <div class="card">
     <div class="card-body">
@@ -35,33 +39,17 @@
             <span>Total</span>
             <span>Rp {{ number_format($order->total, 0, ',', '.') }}</span>
         </div>
-        
-        {{-- Tombol Download Invoice (hanya muncul jika sudah lunas) --}}
-        @php
-          $paymentStatus = strtolower($order->payment?->status ?? '');
-          $hasConfirmation = $order->paymentConfirmation && $order->paymentConfirmation->isApproved();
-          $isPaid = in_array($paymentStatus, ['paid', 'settled', 'capture', 'settlement']) || $hasConfirmation;
-        @endphp
 
-        @if($isPaid)
-            <div style="margin-top: 16px;">
-                <a href="{{ route('customer.invoice.download', $order->id) }}" class="btn-invoice-download">
-                    📄 Download Invoice
-                </a>
-            </div>
-        @endif
-
-        {{-- Tampilkan bukti pembayaran jika ada --}}
         @if($order->paymentConfirmation)
             <div class="payment-proof-section mt-4">
-                <h5>📄 Bukti Pembayaran</h5>
-                
+                <h5>Bukti Pembayaran</h5>
+
                 @if($order->paymentConfirmation->isApproved())
-                    <div class="status-badge success">✅ Diverifikasi</div>
+                    <div class="status-badge success">Diverifikasi</div>
                 @elseif($order->paymentConfirmation->isPending())
-                    <div class="status-badge warning">⏳ Menunggu Verifikasi</div>
+                    <div class="status-badge warning">Menunggu Verifikasi</div>
                 @elseif($order->paymentConfirmation->isRejected())
-                    <div class="status-badge danger">❌ Ditolak: {{ $order->paymentConfirmation->notes }}</div>
+                    <div class="status-badge danger">Ditolak: {{ $order->paymentConfirmation->notes }}</div>
                 @endif
 
                 <div class="proof-detail">
@@ -89,18 +77,11 @@
                     </div>
                 @endif
 
-                @if($order->paymentConfirmation->isRejected())
-                    <div class="mt-3">
-                        <a href="{{ route('pembayaran.confirmation.resubmit', $order->id) }}" class="btn btn-warning btn-sm">
-                            🔄 Ajukan Ulang
-                        </a>
-                    </div>
-                @endif
             </div>
         @else
             <div class="mt-4">
                 <a href="{{ route('pembayaran.confirmation.show', $order->id) }}" class="btn btn-primary">
-                    📤 Upload Bukti Pembayaran
+                    Upload Bukti Pembayaran
                 </a>
             </div>
         @endif

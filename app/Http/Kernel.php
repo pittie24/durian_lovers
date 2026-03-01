@@ -63,8 +63,7 @@ class Kernel extends HttpKernel
         'signed' => \App\Http\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-
-        // ✅ TAMBAHAN INI (penting)
         'admin' => \App\Http\Middleware\EnsureAdmin::class,
+        'customer' => \App\Http\Middleware\EnsureCustomer::class,
     ];
 }

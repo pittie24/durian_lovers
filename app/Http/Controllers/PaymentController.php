@@ -94,7 +94,7 @@ class PaymentController extends Controller
             try {
                 InvoiceGeneratorService::generate($order, $payment);
                 Log::info('Invoice generated for order', ['order_id' => $order->id]);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 Log::error('Failed to generate invoice', [
                     'order_id' => $order->id,
                     'error' => $e->getMessage(),
@@ -305,7 +305,7 @@ class PaymentController extends Controller
                 try {
                     InvoiceGeneratorService::generate($order, $order->payment);
                     Log::info('Invoice generated for order', ['order_id' => $order->id]);
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     Log::error('Failed to generate invoice', [
                         'order_id' => $order->id,
                         'error' => $e->getMessage(),

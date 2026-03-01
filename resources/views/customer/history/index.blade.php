@@ -16,15 +16,10 @@
       $orderCode = $order->order_code ?? ('ORD-' . str_pad($order->id, 6, '0', STR_PAD_LEFT));
       $dateText  = optional($order->created_at)->translatedFormat('d F Y');
 
-      $statusRaw = strtolower(trim($order->status ?? ''));
-
-      $statusClass =
-        Str::contains($statusRaw, 'selesai') ? 'done' :
-        (Str::contains($statusRaw, 'ship') || Str::contains($statusRaw, 'kirim') ? 'shipped' :
-        (Str::contains($statusRaw, 'proses') ? 'process' :
-        (Str::contains($statusRaw, 'batal') ? 'cancel' : 'default')));
-
-      $statusLabel = $order->status ?? 'Status';
+      $statusKey = strtoupper((string) ($order->status_key ?? $order->status ?? ''));
+      $statusRaw = strtolower(trim($statusKey));
+      $statusClass = $order->status_class ?? 'default';
+      $statusLabel = $order->status_label ?? ($order->status ?? 'Status');
 
       $pickupLabel  = $order->delivery_method ?? $order->metode_pengambilan ?? 'Ambil di Toko';
       $paymentLabel = $order->payment_method ?? $order->metode_pembayaran ?? 'Virtual Account';
@@ -37,7 +32,7 @@
 
     @php
       // Cek apakah order menunggu pembayaran
-      $canPay = Str::contains($statusRaw, ['menunggu', 'pending', 'belum']);
+      $canPay = $statusKey === 'MENUNGGU_PEMBAYARAN';
     @endphp
 
     <div class="order-card {{ $canPay ? 'order-card-clickable' : '' }}" 
@@ -122,7 +117,13 @@
         <div class="order-foot-right">
           <div class="total-box">
             <div class="total-label">Total Pembayaran</div>
-            <div class="total-value">Rp {{ number_format($total,0,',','.') }}</div>
+            <div class="total-value">
+              @if(Str::contains($statusRaw, 'batal'))
+                -
+              @else
+                Rp {{ number_format($total,0,',','.') }}
+              @endif
+            </div>
           </div>
           
           {{-- Tombol Download Invoice (hanya muncul jika sudah lunas) --}}

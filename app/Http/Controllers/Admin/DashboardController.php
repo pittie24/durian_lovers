@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Models\Product;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -24,13 +24,24 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        // ===== Produk terlaris (untuk list + bar chart) =====
-        $topProducts = Product::orderByDesc('sold_count')
+        // ===== Produk terlaris (sinkron dengan laporan: berdasarkan transaksi valid) =====
+        $topProducts = DB::table('order_items as oi')
+            ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->join('products as p', 'p.id', '=', 'oi.product_id')
+            ->leftJoin('payment_confirmations as pc', 'pc.order_id', '=', 'o.id')
+            ->where('o.status', '!=', 'DIBATALKAN')
+            ->where(function ($query) {
+                $query->whereNull('pc.status')
+                    ->orWhere('pc.status', '!=', 'REJECTED');
+            })
+            ->selectRaw('p.id, p.name, SUM(oi.quantity) as sold_count, SUM(oi.total) as revenue')
+            ->groupBy('p.id', 'p.name')
+            ->orderByDesc('sold_count')
             ->take(5)
             ->get();
 
         $topProductLabels = $topProducts->pluck('name')->values();
-        $topProductSales  = $topProducts->pluck('sold_count')->values();
+        $topProductSales  = $topProducts->pluck('sold_count')->map(fn ($value) => (int) $value)->values();
 
         // ===== Grafik Penjualan 7 Hari Terakhir (line chart) =====
         $start = Carbon::now()->subDays(6)->startOfDay();

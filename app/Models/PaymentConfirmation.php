@@ -81,9 +81,9 @@ class PaymentConfirmation extends Model
             'verified_at' => now(),
         ]);
 
-        // Update order status to SELESAI
+        // Setelah pembayaran valid, pesanan masuk ke tahap proses admin.
         $this->order->update([
-            'status' => 'SELESAI',
+            'status' => 'SEDANG_DIPROSES',
         ]);
 
         // Update or create payment record
@@ -94,11 +94,13 @@ class PaymentConfirmation extends Model
                 'provider' => 'manual_transfer',
                 'status' => 'PAID',
                 'payment_method' => $this->bank_name,
+                'paid_at' => now(),
             ]);
         } else {
             $payment->update([
                 'status' => 'PAID',
                 'payment_method' => $this->bank_name,
+                'paid_at' => now(),
             ]);
         }
 
@@ -106,7 +108,7 @@ class PaymentConfirmation extends Model
         if (!$this->order->invoice) {
             try {
                 \App\Services\InvoiceGeneratorService::generate($this->order, $payment);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 \Log::error('Failed to generate invoice after confirmation approval', [
                     'order_id' => $this->order->id,
                     'error' => $e->getMessage(),

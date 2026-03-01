@@ -3,10 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\Invoice;
 use App\Services\InvoiceGeneratorService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class InvoiceController extends Controller
 {
@@ -26,13 +24,8 @@ class InvoiceController extends Controller
             abort(403, 'Invoice not available yet');
         }
         
-        // Get or create invoice
-        $invoice = $order->invoice;
-        
-        if (!$invoice) {
-            // Generate invoice if not exists (for orders paid before this feature)
-            $invoice = InvoiceGeneratorService::generate($order, $order->payment);
-        }
+        // Always refresh invoice so downloaded file follows the latest styling.
+        $invoice = InvoiceGeneratorService::generate($order, $order->payment, $order->invoice);
         
         if (!$invoice->pdf_path) {
             abort(404, 'Invoice file not found');
@@ -43,8 +36,10 @@ class InvoiceController extends Controller
         if (!file_exists($filePath)) {
             abort(404, 'Invoice file not found');
         }
-        
-        return response()->download($filePath, $invoice->invoice_number . '.pdf');
+
+        $downloadName = $invoice->invoice_number . '.' . pathinfo($invoice->pdf_path, PATHINFO_EXTENSION);
+
+        return response()->download($filePath, $downloadName);
     }
     
     /**
@@ -63,13 +58,8 @@ class InvoiceController extends Controller
             abort(403, 'Invoice not available yet');
         }
         
-        // Get or create invoice
-        $invoice = $order->invoice;
-        
-        if (!$invoice) {
-            // Generate invoice if not exists
-            $invoice = InvoiceGeneratorService::generate($order, $order->payment);
-        }
+        // Always refresh invoice so preview follows the latest styling.
+        $invoice = InvoiceGeneratorService::generate($order, $order->payment, $order->invoice);
         
         if (!$invoice->pdf_path) {
             abort(404, 'Invoice file not found');

@@ -54,7 +54,7 @@ class UpdatePaymentStatus extends Command
                 try {
                     InvoiceGeneratorService::generate($order, $payment);
                     $this->info("Invoice generated successfully!");
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     $this->error("Failed to generate invoice: " . $e->getMessage());
                 }
             } else {

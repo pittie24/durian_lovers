@@ -14,10 +14,31 @@ class TrackingController extends Controller
      */
     public function index()
     {
-        $orders = Order::with(['items.product'])
+        $orders = Order::with(['items.product', 'payment', 'invoice', 'paymentConfirmation'])
             ->where('user_id', Auth::id())
             ->latest()
             ->get();
+
+        foreach ($orders as $order) {
+            $this->syncPaymentStatus($order);
+        }
+
+        $steps = [
+            'PESANAN_DITERIMA' => 1,
+            'MENUNGGU_PEMBAYARAN' => 1,
+            'SEDANG_DIPROSES' => 2,
+            'SIAP_DIAMBIL_DIKIRIM' => 3,
+            'SELESAI' => 4,
+            'DIBATALKAN' => 1,
+        ];
+
+        $orders = Order::with(['items.product', 'payment', 'invoice', 'paymentConfirmation'])
+            ->where('user_id', Auth::id())
+            ->latest()
+            ->get()
+            ->each(function ($order) use ($steps) {
+                $order->currentStep = $steps[$order->status] ?? 1;
+            });
 
         return view('customer.tracking.index', [
             'orders' => $orders,
@@ -63,7 +84,7 @@ class TrackingController extends Controller
                             if (!$order->invoice) {
                                 try {
                                     \App\Services\InvoiceGeneratorService::generate($order, $order->payment);
-                                } catch (\Exception $e) {
+                                } catch (\Throwable $e) {
                                     Log::error('Failed to generate invoice', [
                                         'order_id' => $order->id,
                                         'error' => $e->getMessage(),

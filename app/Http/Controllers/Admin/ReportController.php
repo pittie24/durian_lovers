@@ -22,14 +22,21 @@ class ReportController extends Controller
         $end   = Carbon::parse($endDate)->endOfDay();
 
         // ===== SUMMARY =====
-        $totalRevenue = (float) Order::whereBetween('created_at', [$start, $end])->sum('total');
-        $totalOrders  = (int)   Order::whereBetween('created_at', [$start, $end])->count();
+        $reportOrders = $this->reportOrdersQuery($start, $end);
+        $totalRevenue = (float) (clone $reportOrders)->sum('total');
+        $totalOrders  = (int)   (clone $reportOrders)->count();
 
         // ===== PRODUK TERLARIS (ikut filter tanggal) =====
         $bestProducts = DB::table('order_items as oi')
             ->join('orders as o', 'o.id', '=', 'oi.order_id')
             ->join('products as p', 'p.id', '=', 'oi.product_id')
+            ->leftJoin('payment_confirmations as pc', 'pc.order_id', '=', 'o.id')
             ->whereBetween('o.created_at', [$start, $end])
+            ->where('o.status', '!=', 'DIBATALKAN')
+            ->where(function ($query) {
+                $query->whereNull('pc.status')
+                    ->orWhere('pc.status', '!=', 'REJECTED');
+            })
             ->selectRaw('p.id, p.name, SUM(oi.quantity) as sold_count')
             ->groupBy('p.id', 'p.name')
             ->orderByDesc('sold_count')
@@ -43,8 +50,7 @@ class ReportController extends Controller
         $groupKeyExpr = $this->groupKeyExpr($view);
         $orderExpr    = $this->orderExpr($view);
 
-        $trendRows = Order::query()
-            ->whereBetween('created_at', [$start, $end])
+        $trendRows = $this->reportOrdersQuery($start, $end)
             ->selectRaw("$groupKeyExpr as grp")
             ->selectRaw("SUM(total) as revenue")
             ->selectRaw("COUNT(*) as orders_count")
@@ -88,7 +94,13 @@ class ReportController extends Controller
         $categoryRows = DB::table('order_items as oi')
             ->join('orders as o', 'o.id', '=', 'oi.order_id')
             ->join('products as p', 'p.id', '=', 'oi.product_id')
+            ->leftJoin('payment_confirmations as pc', 'pc.order_id', '=', 'o.id')
             ->whereBetween('o.created_at', [$start, $end])
+            ->where('o.status', '!=', 'DIBATALKAN')
+            ->where(function ($query) {
+                $query->whereNull('pc.status')
+                    ->orWhere('pc.status', '!=', 'REJECTED');
+            })
             ->selectRaw("COALESCE(p.category, 'Lainnya') as category")
             ->selectRaw("SUM(oi.total) as revenue")
             ->groupBy('category')
@@ -139,20 +151,26 @@ class ReportController extends Controller
             default   => 'Harian',
         };
 
-        $totalRevenue = (float) Order::whereBetween('created_at', [$start, $end])->sum('total');
-        $totalOrders  = (int)   Order::whereBetween('created_at', [$start, $end])->count();
+        $reportOrders = $this->reportOrdersQuery($start, $end);
+        $totalRevenue = (float) (clone $reportOrders)->sum('total');
+        $totalOrders  = (int)   (clone $reportOrders)->count();
         $avgOrder     = ($totalOrders > 0) ? ($totalRevenue / $totalOrders) : 0;
 
         $totalSoldVal = (int) DB::table('order_items as oi')
             ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->leftJoin('payment_confirmations as pc', 'pc.order_id', '=', 'o.id')
             ->whereBetween('o.created_at', [$start, $end])
+            ->where('o.status', '!=', 'DIBATALKAN')
+            ->where(function ($query) {
+                $query->whereNull('pc.status')
+                    ->orWhere('pc.status', '!=', 'REJECTED');
+            })
             ->sum('oi.quantity');
 
         $groupKeyExpr = $this->groupKeyExpr($range);
         $orderExpr    = $this->orderExpr($range);
 
-        $rows = Order::query()
-            ->whereBetween('created_at', [$start, $end])
+        $rows = $this->reportOrdersQuery($start, $end)
             ->selectRaw("$groupKeyExpr as grp")
             ->selectRaw("COUNT(*) as jumlah_pesanan")
             ->selectRaw("SUM(total) as pendapatan")
@@ -223,21 +241,27 @@ class ReportController extends Controller
         };
 
         // ===== SUMMARY =====
-        $totalRevenue = (float) Order::whereBetween('created_at', [$start, $end])->sum('total');
-        $totalOrders  = (int)   Order::whereBetween('created_at', [$start, $end])->count();
+        $reportOrders = $this->reportOrdersQuery($start, $end);
+        $totalRevenue = (float) (clone $reportOrders)->sum('total');
+        $totalOrders  = (int)   (clone $reportOrders)->count();
         $avgOrder     = ($totalOrders > 0) ? ($totalRevenue / $totalOrders) : 0;
 
         $totalSoldVal = (int) DB::table('order_items as oi')
             ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->leftJoin('payment_confirmations as pc', 'pc.order_id', '=', 'o.id')
             ->whereBetween('o.created_at', [$start, $end])
+            ->where('o.status', '!=', 'DIBATALKAN')
+            ->where(function ($query) {
+                $query->whereNull('pc.status')
+                    ->orWhere('pc.status', '!=', 'REJECTED');
+            })
             ->sum('oi.quantity');
 
         // ===== DETAIL PENJUALAN (ikut range) =====
         $groupKeyExpr = $this->groupKeyExpr($range);
         $orderExpr    = $this->orderExpr($range);
 
-        $detailRows = Order::query()
-            ->whereBetween('created_at', [$start, $end])
+        $detailRows = $this->reportOrdersQuery($start, $end)
             ->selectRaw("$groupKeyExpr as grp")
             ->selectRaw("COUNT(*) as jumlah_pesanan")
             ->selectRaw("SUM(total) as pendapatan")
@@ -265,7 +289,13 @@ class ReportController extends Controller
         $topProducts = DB::table('order_items as oi')
             ->join('orders as o', 'o.id', '=', 'oi.order_id')
             ->join('products as p', 'p.id', '=', 'oi.product_id')
+            ->leftJoin('payment_confirmations as pc', 'pc.order_id', '=', 'o.id')
             ->whereBetween('o.created_at', [$start, $end])
+            ->where('o.status', '!=', 'DIBATALKAN')
+            ->where(function ($query) {
+                $query->whereNull('pc.status')
+                    ->orWhere('pc.status', '!=', 'REJECTED');
+            })
             ->selectRaw('p.id, p.name, SUM(oi.quantity) as qty_sold, SUM(oi.total) as revenue')
             ->groupBy('p.id', 'p.name')
             ->orderByDesc('qty_sold')
@@ -315,5 +345,15 @@ class ReportController extends Controller
             'monthly' => $d->translatedFormat('M Y'),
             default   => $d->translatedFormat('d M Y'),
         };
+    }
+
+    private function reportOrdersQuery(Carbon $start, Carbon $end)
+    {
+        return Order::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->where('status', '!=', 'DIBATALKAN')
+            ->whereDoesntHave('paymentConfirmation', function ($query) {
+                $query->where('status', 'REJECTED');
+            });
     }
 }

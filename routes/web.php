@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PaymentConfirmationController as AdminPaymentConfirmationController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReportController;
@@ -13,6 +12,8 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\GuestController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\PaymentConfirmationController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\TrackingController;
@@ -28,12 +29,12 @@ Route::get('/register', [CustomerAuthController::class, 'showRegister']);
 Route::post('/register', [CustomerAuthController::class, 'register']);
 Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
 
-// ================== CUSTOMER AREA ==================
-Route::middleware('auth')->group(function () {
+// ================== PUBLIC PRODUCT BROWSING ==================
+Route::get('/produk', [ProductController::class, 'index'])->name('produk.index');
+Route::get('/produk/{product}', [ProductController::class, 'show'])->name('produk.show');
 
-    // Produk
-    Route::get('/produk', [ProductController::class, 'index'])->name('produk.index');
-    Route::get('/produk/{product}', [ProductController::class, 'show'])->name('produk.show');
+// ================== CUSTOMER AREA ==================
+Route::middleware(['auth', 'customer'])->group(function () {
 
     // Keranjang
     Route::get('/keranjang', [CartController::class, 'index'])->name('keranjang.index');
@@ -50,6 +51,13 @@ Route::middleware('auth')->group(function () {
     // Checkout / Pembayaran
     Route::get('/pembayaran', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/pembayaran', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::get('/pembayaran/return', [PaymentController::class, 'return'])->name('pembayaran.return');
+    Route::get('/pembayaran/{order}', [PaymentController::class, 'show'])->name('pembayaran.show');
+    Route::post('/pembayaran/{order}/lanjutkan', [PaymentController::class, 'proceed'])->name('pembayaran.proceed');
+    Route::get('/pembayaran/{order}/sync', [PaymentController::class, 'syncStatus'])->name('pembayaran.sync');
+    Route::get('/pembayaran/{order}/konfirmasi', [PaymentConfirmationController::class, 'show'])->name('pembayaran.confirmation.show');
+    Route::post('/pembayaran/{order}/konfirmasi', [PaymentConfirmationController::class, 'store'])->name('pembayaran.confirmation.store');
+    Route::get('/pembayaran/{order}/konfirmasi/ulang', [PaymentConfirmationController::class, 'resubmit'])->name('pembayaran.confirmation.resubmit');
 
     // Tracking + Riwayat
     Route::get('/status-pesanan', [TrackingController::class, 'index'])->name('tracking.index');
@@ -83,14 +91,15 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('/produk/{product}', [AdminProductController::class, 'update'])->name('admin.produk.update');
     Route::delete('/produk/{product}', [AdminProductController::class, 'destroy'])->name('admin.produk.destroy');
 
-    // Pesanan
-    Route::get('/pesanan', [AdminOrderController::class, 'index'])->name('admin.pesanan.index');
-    Route::get('/pesanan/{order}', [AdminOrderController::class, 'show'])->name('admin.pesanan.show');
-    Route::post('/pesanan/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('admin.pesanan.status');
-
     // Konfirmasi Pembayaran
     Route::get('/payment-confirmations', [AdminPaymentConfirmationController::class, 'index'])->name('admin.payment-confirmations.index');
+    Route::get('/payment-confirmations/manual/create', [AdminPaymentConfirmationController::class, 'createManual'])->name('admin.payment-confirmations.manual.create');
+    Route::post('/payment-confirmations/manual', [AdminPaymentConfirmationController::class, 'storeManual'])->name('admin.payment-confirmations.manual.store');
+    Route::get('/payment-confirmations/order/{order}', [AdminPaymentConfirmationController::class, 'showOrder'])->name('admin.payment-confirmations.order.show');
+    Route::post('/payment-confirmations/order/{order}/status', [AdminPaymentConfirmationController::class, 'updateOrderStatusForOrder'])->name('admin.payment-confirmations.order.status');
     Route::get('/payment-confirmations/{confirmation}', [AdminPaymentConfirmationController::class, 'show'])->name('admin.payment-confirmations.show');
+    Route::get('/payment-confirmations/{confirmation}/proof-image', [AdminPaymentConfirmationController::class, 'proofImage'])->name('admin.payment-confirmations.proof-image');
+    Route::post('/payment-confirmations/{confirmation}/order-status', [AdminPaymentConfirmationController::class, 'updateOrderStatus'])->name('admin.payment-confirmations.order-status');
     Route::post('/payment-confirmations/{confirmation}/approve', [AdminPaymentConfirmationController::class, 'approve'])->name('admin.payment-confirmations.approve');
     Route::post('/payment-confirmations/{confirmation}/reject', [AdminPaymentConfirmationController::class, 'reject'])->name('admin.payment-confirmations.reject');
     Route::delete('/payment-confirmations/{confirmation}', [AdminPaymentConfirmationController::class, 'destroy'])->name('admin.payment-confirmations.destroy');

@@ -8,6 +8,8 @@ use App\Models\Payment;
 use App\Models\PaymentConfirmation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class CheckoutController extends Controller
@@ -18,6 +20,12 @@ class CheckoutController extends Controller
     public function index(Request $request)
     {
         $cart = $request->session()->get('cart', []);
+
+        if (empty($cart)) {
+            return redirect('/produk')->withErrors([
+                'cart' => 'Silakan belanja terlebih dahulu sebelum membuka halaman pembayaran.',
+            ]);
+        }
 
         // Default shipping_method untuk tampilan pertama kali
         $shippingMethod = $request->get('shipping_method', 'delivery');
@@ -112,26 +120,41 @@ class CheckoutController extends Controller
         ]);
 
         // Upload proof image and create payment confirmation
+        $paymentConfirmationSaved = false;
         if ($request->hasFile('proof_image')) {
             $image = $request->file('proof_image');
             $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
             $imagePath = $image->storeAs('payment-confirmations', $imageName, 'public');
 
-            PaymentConfirmation::create([
-                'order_id' => $order->id,
-                'user_id' => Auth::id(),
-                'proof_image' => $imagePath,
-                'bank_name' => $data['payment_method'],
-                'account_name' => $data['account_name'],
-                'transfer_amount' => $data['transfer_amount'],
-                'status' => 'PENDING',
-            ]);
+            if (Schema::hasTable('payment_confirmations')) {
+                PaymentConfirmation::create([
+                    'order_id' => $order->id,
+                    'user_id' => Auth::id(),
+                    'proof_image' => $imagePath,
+                    'bank_name' => $data['payment_method'],
+                    'account_name' => $data['account_name'],
+                    'transfer_amount' => $data['transfer_amount'],
+                    'status' => 'PENDING',
+                ]);
+                $paymentConfirmationSaved = true;
+            } else {
+                Storage::disk('public')->delete($imagePath);
+
+                Log::warning('Payment confirmation table is missing during checkout.', [
+                    'order_id' => $order->id,
+                    'user_id' => Auth::id(),
+                ]);
+            }
         }
 
         $request->session()->forget('cart');
 
         // Redirect to tracking page
-        return redirect('/status-pesanan/' . $order->id)->with('success', 'Pesanan berhasil dibuat! Bukti pembayaran sudah diupload dan menunggu verifikasi admin.');
+        $message = $paymentConfirmationSaved
+            ? 'Pesanan berhasil dibuat! Bukti pembayaran sudah diupload dan menunggu verifikasi admin.'
+            : 'Pesanan berhasil dibuat. Jika bukti pembayaran belum tersimpan, silakan hubungi admin.';
+
+        return redirect('/status-pesanan/' . $order->id)->with('success', $message);
     }
 
     /**

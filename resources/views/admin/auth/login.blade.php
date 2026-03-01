@@ -12,6 +12,11 @@
 <body class="theme-admin auth-page">
     <div class="auth-card dark">
         <h2>Login Admin</h2>
+        @if ($errors->any())
+            <div class="alert danger auth-alert">
+                {{ $errors->first() }}
+            </div>
+        @endif
         <form method="POST" action="/admin/login">
             @csrf
             <label>Email Admin</label>
@@ -25,5 +30,13 @@
             <span class="muted">Bukan admin? <a href="/login">Login sebagai Pembeli</a></span>
         </div>
     </div>
+    <style>
+        .auth-alert {
+            margin-bottom: 14px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+    </style>
 </body>
 </html>

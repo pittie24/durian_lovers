@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,12 @@ class CustomerAuthController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
+
+        if ($this->isAdminEmail($credentials['email'])) {
+            return back()
+                ->withErrors(['email' => 'Akun admin tidak dapat login di halaman pelanggan.'])
+                ->onlyInput('email');
+        }
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
@@ -45,6 +52,12 @@ class CustomerAuthController extends Controller
             'password' => ['required', 'min:6', 'confirmed'],
         ]);
 
+        if ($this->isAdminEmail($validated['email'])) {
+            return back()
+                ->withErrors(['email' => 'Email tersebut sudah terdaftar sebagai akun admin.'])
+                ->withInput($request->except(['password', 'password_confirmation']));
+        }
+
         User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -54,6 +67,12 @@ class CustomerAuthController extends Controller
         ]);
 
         return redirect('/login')->with('success', 'Registrasi berhasil. Silakan login.');
+    }
+
+    private function isAdminEmail(string $email): bool
+    {
+        return Admin::where('email', $email)->exists()
+            || strcasecmp($email, 'admin@durianlovers.com') === 0;
     }
 
     public function logout(Request $request)

@@ -15,6 +15,11 @@ class Payment extends Model
         'snap_token',
         'status',
         'payment_method',
+        'paid_at',
+    ];
+
+    protected $casts = [
+        'paid_at' => 'datetime',
     ];
 
     public function order()

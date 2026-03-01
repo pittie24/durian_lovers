@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
+    private const WALKIN_EMAIL = 'walkin.customer@durianlovers.local';
+
     public function index(Request $request)
     {
         $q = $request->get('q');
@@ -20,7 +22,12 @@ class CustomerController extends Controller
             $query->where(function ($s) use ($q) {
                 $s->where('name', 'like', "%{$q}%")
                   ->orWhere('email', 'like', "%{$q}%")
-                  ->orWhere('phone', 'like', "%{$q}%");
+                  ->orWhere('phone', 'like', "%{$q}%")
+                  ->orWhereHas('orders', function ($orders) use ($q) {
+                      $orders->where('customer_name', 'like', "%{$q}%")
+                          ->orWhere('customer_email', 'like', "%{$q}%")
+                          ->orWhere('customer_phone', 'like', "%{$q}%");
+                  });
             });
         }
 
@@ -31,6 +38,13 @@ class CustomerController extends Controller
             ->orderByDesc('terakhir_belanja')
             ->paginate(10)
             ->withQueryString();
+
+        $customers->getCollection()->load('orders');
+        $customers->setCollection(
+            $customers->getCollection()->map(function (User $customer) {
+                return $this->decorateCustomer($customer);
+            })
+        );
 
         // summary cards
         $totalPelanggan = User::count();
@@ -56,8 +70,39 @@ class CustomerController extends Controller
 
     public function show(User $customer)
     {
+        $customer->load('orders');
+        $customer = $this->decorateCustomer($customer);
+
         return view('admin.customers.show', [
-            'customer' => $customer->load('orders'),
+            'customer' => $customer,
         ]);
+    }
+
+    private function decorateCustomer(User $customer): User
+    {
+        $customer->setAttribute('display_name', $customer->name);
+        $customer->setAttribute('display_email', $customer->email);
+        $customer->setAttribute('display_phone', $customer->phone ?? '-');
+
+        if ($customer->email !== self::WALKIN_EMAIL) {
+            return $customer;
+        }
+
+        $latestCashOrder = $customer->orders
+            ->sortByDesc('created_at')
+            ->first(function (Order $order) {
+                return strtoupper((string) $order->payment_method) === 'CASH'
+                    && $order->customer_name;
+            });
+
+        if (!$latestCashOrder) {
+            return $customer;
+        }
+
+        $customer->setAttribute('display_name', $latestCashOrder->customer_display_name);
+        $customer->setAttribute('display_email', $latestCashOrder->customer_display_email);
+        $customer->setAttribute('display_phone', $latestCashOrder->customer_display_phone);
+
+        return $customer;
     }
 }

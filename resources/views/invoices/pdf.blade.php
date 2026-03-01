@@ -37,7 +37,7 @@
         .header .company-name {
             font-size: 18px;
             font-weight: bold;
-            color: #27ae60;
+            color: #d97706;
             margin-bottom: 10px;
         }
         
@@ -67,6 +67,8 @@
         
         .invoice-info p {
             margin-bottom: 5px;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
         
         .invoice-details {
@@ -80,7 +82,7 @@
         }
         
         .invoice-details table th {
-            background-color: #27ae60;
+            background-color: #d97706;
             color: white;
             padding: 10px;
             text-align: left;
@@ -113,7 +115,7 @@
         }
         
         .totals table tr.total-row {
-            background-color: #27ae60;
+            background-color: #d97706;
             color: white;
             font-weight: bold;
             font-size: 14px;
@@ -150,7 +152,7 @@
         }
         
         .status-paid {
-            background-color: #27ae60;
+            background-color: #d97706;
             color: white;
         }
         
@@ -171,7 +173,7 @@
             text-align: center;
             margin-top: 20px;
             font-size: 14px;
-            color: #27ae60;
+            color: #d97706;
             font-weight: bold;
         }
     </style>
@@ -183,9 +185,9 @@
             <h1>INVOICE</h1>
             <div class="company-name">Durian Lovers</div>
             <div class="company-info">
-                Jl. Durian No. 123, Jakarta, Indonesia<br>
-                WhatsApp: +62 812-3456-7890<br>
-                Email: info@durianlovers.com
+                Jl. Kedamaian Selatan Blok F<br>
+                WhatsApp: 085179920483<br>
+                Email: admin@durianlovers.com
             </div>
         </div>
         
@@ -195,14 +197,14 @@
                 <h3>Informasi Invoice</h3>
                 <p><strong>Nomor Invoice:</strong> {{ $invoiceNumber }}</p>
                 <p><strong>Tanggal:</strong> {{ $issuedDate }}</p>
-                <p><strong>Nomor Order:</strong> {{ $order->order_number }}</p>
+                <p><strong>Waktu:</strong> {{ $issuedTime }} WITA</p>
+                <p><strong>Nomor Order:</strong> <span style="word-break: break-all;">{{ $order->order_number }}</span></p>
             </div>
             <div class="right">
                 <h3>Data Pelanggan</h3>
-                <p><strong>{{ $order->user->name }}</strong></p>
-                <p>{{ $order->user->email }}</p>
-                <p>{{ $order->phone }}</p>
-                <p>{{ $order->shipping_address }}</p>
+                <p><strong>{{ $order->customer_display_name }}</strong></p>
+                <p>{{ $order->customer_display_email }}</p>
+                <p>{{ $order->customer_display_phone }}</p>
             </div>
         </div>
         
@@ -267,8 +269,6 @@
         
         <!-- Footer -->
         <div class="footer">
-            <p>Invoice ini dibuat secara otomatis dan sah tanpa tanda tangan.</p>
-            <p>Untuk pertanyaan, hubungi kami di WhatsApp: +62 812-3456-7890</p>
             <p>&copy; {{ date('Y') }} Durian Lovers. All rights reserved.</p>
         </div>
     </div>
