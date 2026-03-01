@@ -52,6 +52,16 @@ class Order extends Model
         return $this->hasOne(Payment::class);
     }
 
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class);
+    }
+
+    public function paymentConfirmation()
+    {
+        return $this->hasOne(PaymentConfirmation::class);
+    }
+
     public function getOrderNumberAttribute(): string
     {
         return 'ORD-' . str_pad($this->id, 6, '0', STR_PAD_LEFT);

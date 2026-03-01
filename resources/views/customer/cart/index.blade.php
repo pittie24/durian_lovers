@@ -5,7 +5,7 @@
     use Illuminate\Support\Str;
 
     $continueUrl = url('/produk');
-    $checkoutUrl = url('/checkout');
+    $checkoutUrl = url('/pembayaran');
 
     $subtotal = $summary['subtotal'] ?? 0;
     $total    = $summary['total'] ?? 0;
@@ -121,11 +121,11 @@
         </div>
 
         <a href="{{ $checkoutUrl }}" class="btn-checkout">
-          Lanjut ke Checkout
+          💳 Bayar Sekarang
         </a>
 
-        <a href="{{ $continueUrl }}" class="btn-continue">
-          Lanjut Belanja
+        <a href="{{ url('/status-pesanan') }}" class="btn-continue">
+          Lihat Status Pesanan
         </a>
 
       </div>

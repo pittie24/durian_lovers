@@ -23,7 +23,9 @@
             <nav class="nav-links" id="navMenu">
                 @auth
                     <a href="/produk" class="{{ request()->is('produk*') ? 'active' : '' }}">Produk</a>
+                    <a href="/pembayaran" class="{{ request()->is('pembayaran*') ? 'active' : '' }}">Pembayaran</a>
                     <a href="/riwayat" class="{{ request()->is('riwayat*') ? 'active' : '' }}">Riwayat</a>
+                    <a href="/status-pesanan" class="{{ request()->is('status-pesanan*') ? 'active' : '' }}">Status Pesanan</a>
                     <a href="/keranjang" class="{{ request()->is('keranjang*') ? 'active' : '' }}">Keranjang</a>
 
                     <span class="nav-user">Halo, {{ auth()->user()->name }}</span>

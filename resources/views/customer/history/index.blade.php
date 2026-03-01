@@ -124,6 +124,21 @@
             <div class="total-label">Total Pembayaran</div>
             <div class="total-value">Rp {{ number_format($total,0,',','.') }}</div>
           </div>
+          
+          {{-- Tombol Download Invoice (hanya muncul jika sudah lunas) --}}
+          @php
+            $paymentStatus = strtolower($order->payment?->status ?? '');
+            $hasConfirmation = $order->paymentConfirmation && $order->paymentConfirmation->isApproved();
+            $isPaid = in_array($paymentStatus, ['paid', 'settled', 'capture', 'settlement']) || $hasConfirmation;
+          @endphp
+          
+          @if($isPaid)
+            <a href="{{ route('customer.invoice.download', $order->id) }}"
+               class="btn-invoice-download"
+               onclick="event.stopPropagation();">
+              📄 Download Invoice
+            </a>
+          @endif
         </div>
       </div>
 

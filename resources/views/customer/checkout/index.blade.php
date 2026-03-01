@@ -2,49 +2,32 @@
 
 @section('content')
 @php
-  use Illuminate\Support\Str;
-
-  // ===== Ambil data ringkasan dari controller (paling umum) =====
-  // Kamu bisa sesuaikan kalau variabelmu beda.
-  // Contoh yang sering:
-  // $summary['subtotal'], $summary['total'], $cart (array session)
-  $subtotal = $summary['subtotal'] ?? ($subtotal ?? 0);
-
-  // default pilihan
-  $shippingMethod = old('shipping_method', 'delivery'); // delivery | pickup
-  $paymentMethod  = old('payment_method', 'bank');      // bank | ewallet | va
-
-  // ongkir: 10k kalau delivery
+  $shippingMethod = old('shipping_method', 'delivery');
+  $cartItems = $cart ?? [];
+  $subtotal = $summary['subtotal'] ?? 0;
   $shippingCost = ($shippingMethod === 'delivery') ? 10000 : 0;
   $total = $subtotal + $shippingCost;
-
-  // Data item (kalau kamu punya $cart dari session seperti CartController kamu)
-  // Struktur cart kamu: $cart[id] = ['name','price','quantity',...]
-  $cartItems = $cart ?? ($items ?? []);
 @endphp
 
 <div class="checkout-page">
-  <div class="checkout-title-wrap">
-    <h1 class="checkout-title">Checkout</h1>
-  </div>
+  <h1 class="checkout-title">Pembayaran</h1>
 
-  <form method="POST" action="{{ url('/checkout') }}" class="checkout-grid">
+  <form method="POST" action="{{ url('/pembayaran') }}" class="checkout-grid" enctype="multipart/form-data">
     @csrf
 
     {{-- LEFT --}}
     <div class="checkout-left">
 
-      {{-- METODE PENGIRIMAN (CARD) --}}
+      {{-- METODE PENGIRIMAN --}}
       <div class="ck-card">
         <div class="ck-card-title">Metode Pengiriman</div>
-
         <div class="ship-grid">
           <label class="ship-option {{ $shippingMethod==='delivery' ? 'active' : '' }}">
             <input type="radio" name="shipping_method" value="delivery" {{ $shippingMethod==='delivery' ? 'checked' : '' }}>
             <div class="ship-ico">🚚</div>
             <div class="ship-text">
               <div class="ship-name">Dikirim</div>
-              <div class="ship-sub">Ongkir 10k</div>
+              <div class="ship-sub">Ongkir Rp 10.000</div>
             </div>
           </label>
 
@@ -53,7 +36,7 @@
             <div class="ship-ico">🏪</div>
             <div class="ship-text">
               <div class="ship-name">Ambil di Toko</div>
-              <div class="ship-sub">Siap 5 menit</div>
+              <div class="ship-sub">Gratis</div>
             </div>
           </label>
         </div>
@@ -62,76 +45,92 @@
       {{-- ALAMAT PENGIRIMAN --}}
       <div class="ck-card" id="addressCard">
         <div class="ck-card-title">Alamat Pengiriman</div>
-
         <div class="ck-field">
           <label class="ck-label">Nomor Telepon</label>
-          <input class="ck-input" type="text" name="phone" value="{{ old('phone') }}" placeholder="08xxxxxxxxxx">
+          <input class="ck-input" type="text" name="phone" value="{{ old('phone') }}" placeholder="08xxxxxxxxxx" required>
         </div>
-
         <div class="ck-field">
           <label class="ck-label">Alamat Lengkap</label>
-          <textarea class="ck-textarea" name="address" rows="3" placeholder="Tulis alamat lengkap...">{{ old('address') }}</textarea>
+          <textarea class="ck-textarea" name="address" rows="3" placeholder="Tulis alamat lengkap..." required id="addressInput"></textarea>
         </div>
       </div>
 
-{{-- METODE PEMBAYARAN --}}
-<div class="ck-card">
-  <div class="ck-card-title">Metode Pembayaran</div>
+      {{-- METODE PEMBAYARAN --}}
+      <div class="ck-card">
+        <div class="ck-card-title">Metode Pembayaran</div>
+        <p class="payment-info-text">Silakan transfer ke salah satu rekening berikut:</p>
+        
+        <div class="bank-item">
+          <div class="bank-icon">🏦</div>
+          <div class="bank-info">
+            <div class="bank-name">BRI</div>
+            <div class="bank-number">341901058068539</div>
+            <div class="bank-holder">a.n Durian Lovers</div>
+          </div>
+          <button type="button" class="btn-copy" onclick="copyToClipboard('341901058068539')">📋 Copy</button>
+        </div>
 
-  <div class="pay-list">
-    <label class="pay-item">
-      <input type="radio" name="payment_method" value="bank" {{ $paymentMethod==='bank' ? 'checked' : '' }}>
-      <div class="pay-text">
-        <div class="pay-title">Transfer Bank</div>
-        <div class="pay-sub">BCA, BNI, Mandiri, BRI</div>
+        <div class="bank-item">
+          <div class="bank-icon">📱</div>
+          <div class="bank-info">
+            <div class="bank-name">DANA</div>
+            <div class="bank-number">081352953905</div>
+            <div class="bank-holder">a.n Durian Lovers</div>
+          </div>
+          <button type="button" class="btn-copy" onclick="copyToClipboard('081352953905')">📋 Copy</button>
+        </div>
+
+        <div class="ck-field mt-3">
+          <label class="ck-label">Pilih Metode Pembayaran</label>
+          <select name="payment_method" class="ck-input" required>
+            <option value="">-- Pilih --</option>
+            <option value="BRI">Transfer BRI</option>
+            <option value="DANA">DANA</option>
+          </select>
+        </div>
       </div>
-    </label>
 
-    <label class="pay-item">
-      <input type="radio" name="payment_method" value="ewallet" {{ $paymentMethod==='ewallet' ? 'checked' : '' }}>
-      <div class="pay-text">
-        <div class="pay-title">E-Wallet</div>
-        <div class="pay-sub">GoPay, OVO, Dana, ShopeePay</div>
+      {{-- UPLOAD BUKTI PEMBAYARAN --}}
+      <div class="ck-card">
+        <div class="ck-card-title">📷 Upload Bukti Pembayaran</div>
+        <div class="ck-field">
+          <label class="ck-label">Nama Pengirim</label>
+          <input class="ck-input" type="text" name="account_name" value="{{ auth()->user()->name }}" required>
+        </div>
+        <div class="ck-field">
+          <label class="ck-label">Nominal Transfer (Rp)</label>
+          <input class="ck-input" type="number" name="transfer_amount" value="{{ old('transfer_amount', $total) }}" required>
+        </div>
+        <div class="ck-field">
+          <label class="ck-label">Upload Bukti Transfer</label>
+          <input class="ck-input" type="file" name="proof_image" accept="image/*" required>
+          <small class="ck-hint">Format: JPG, PNG. Maksimal 2MB</small>
+        </div>
+        <div class="alert-info">
+          <strong>📌 Penting:</strong>
+          <ul class="mb-0 mt-1">
+            <li>Pastikan nominal transfer sesuai dengan total pembayaran.</li>
+            <li>Gunakan nama Anda saat melakukan transfer.</li>
+            <li>Bukti akan diverifikasi oleh admin dalam 1-24 jam.</li>
+          </ul>
+        </div>
       </div>
-    </label>
 
-    <label class="pay-item">
-      <input type="radio" name="payment_method" value="va" {{ $paymentMethod==='va' ? 'checked' : '' }}>
-      <div class="pay-text">
-        <div class="pay-title">Virtual Account</div>
-        <div class="pay-sub">Nomor VA otomatis</div>
-      </div>
-    </label>
-  </div>
-</div>
-
-      {{-- Hidden buat backend biar aman --}}
-      <input type="hidden" name="shipping_cost" id="shippingCostInput" value="{{ $shippingCost }}">
-      <input type="hidden" name="subtotal" value="{{ $subtotal }}">
     </div>
 
-    {{-- RIGHT: RINGKASAN PESANAN --}}
+    {{-- RIGHT --}}
     <div class="checkout-right">
-      <div class="ck-card ck-summary">
-        <div class="ck-card-title">Ringkasan Pesanan</div>
-
-        {{-- list item ringkasan (simple seperti figma) --}}
+      <div class="order-summary">
+        <h3 class="summary-title">Ringkasan Pesanan</h3>
+        
         <div class="summary-items">
-          @php $itemCount = 0; @endphp
-
-          @foreach($cartItems as $key => $it)
-            @php
-              // cart session kamu bentuknya array
-              $name = is_array($it) ? ($it['name'] ?? 'Produk') : ($it->name ?? 'Produk');
-              $qty  = is_array($it) ? (int)($it['quantity'] ?? 1) : (int)($it->quantity ?? 1);
-              $price= is_array($it) ? (int)($it['price'] ?? 0) : (int)($it->price ?? 0);
-
-              $itemCount += $qty;
-            @endphp
-
+          @foreach($cartItems as $id => $item)
             <div class="summary-item">
-              <div class="summary-item-name">{{ $name }} <span class="muted">x{{ $qty }}</span></div>
-              <div class="summary-item-price">Rp {{ number_format($price*$qty, 0, ',', '.') }}</div>
+              <div class="item-info">
+                <div class="item-name">{{ $item['name'] }}</div>
+                <div class="item-qty">{{ $item['quantity'] }} x Rp {{ number_format($item['price'], 0, ',', '.') }}</div>
+              </div>
+              <div class="item-total">Rp {{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}</div>
             </div>
           @endforeach
         </div>
@@ -139,171 +138,164 @@
         <div class="summary-divider"></div>
 
         <div class="summary-row">
-          <div class="label">Subtotal <span class="muted">({{ $itemCount }} item)</span></div>
-          <div class="value" id="subtotalText">Rp {{ number_format($subtotal, 0, ',', '.') }}</div>
+          <span>Subtotal</span>
+          <span>Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
         </div>
 
-        <div class="summary-row" id="shippingRow">
-          <div class="label">Ongkos Kirim</div>
-          <div class="value" id="shippingText">Rp {{ number_format($shippingCost, 0, ',', '.') }}</div>
+        <div class="summary-row">
+          <span>Ongkos Kirim</span>
+          <span id="shippingCost">Rp {{ number_format($shippingCost, 0, ',', '.') }}</span>
         </div>
+
+        <div class="summary-divider"></div>
 
         <div class="summary-total">
-          <div class="label">Total</div>
-          <div class="value" id="totalText">Rp {{ number_format($total, 0, ',', '.') }}</div>
+          <span>Total Pembayaran</span>
+          <span id="totalAmount">Rp {{ number_format($total, 0, ',', '.') }}</span>
         </div>
 
-        <button type="submit" class="btn-pay">Bayar Sekarang</button>
+        <button type="submit" class="btn-checkout">
+          ✅ Buat Pesanan & Bayar
+        </button>
       </div>
     </div>
   </form>
 </div>
 
 <style>
-  /* ====== layout utama ====== */
-  .checkout-page{ max-width: 1100px; margin: 0 auto; padding: 24px 18px 40px; }
-  .checkout-title-wrap{ margin: 6px 0 14px; }
-  .checkout-title{ font-size: 28px; font-weight: 800; margin: 0; }
-  .checkout-grid{ display: grid; grid-template-columns: 1.35fr .85fr; gap: 18px; align-items: start; }
+.checkout-page { max-width: 1100px; margin: 0 auto; }
+.checkout-title { font-size: 28px; font-weight: 700; color: #2c3e50; margin-bottom: 24px; }
+.checkout-grid { display: grid; grid-template-columns: 1fr 380px; gap: 24px; }
+@media (max-width: 768px) { .checkout-grid { grid-template-columns: 1fr; } }
 
-  .ck-card{
-    background: #fff;
-    border-radius: 18px;
-    box-shadow: 0 10px 26px rgba(0,0,0,.06);
-    padding: 16px;
-    margin-bottom: 14px;
-  }
-  .ck-card-title{ font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+.ck-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.ck-card-title { font-size: 18px; font-weight: 700; color: #2c3e50; margin-bottom: 16px; }
+.payment-info-text { color: #666; font-size: 14px; margin-bottom: 16px; }
 
-  /* ====== Metode pengiriman (card option) ====== */
-  .ship-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .ship-option{
-    border: 1px solid #ececec;
-    border-radius: 14px;
-    padding: 12px 12px;
-    display: grid;
-    grid-template-columns: 36px 1fr;
-    gap: 10px;
-    cursor: pointer;
-    transition: .15s ease;
-    background: #fff;
-  }
-  .ship-option input{ display:none; }
-  .ship-option .ship-ico{ font-size: 20px; display:flex; align-items:center; justify-content:center; }
-  .ship-name{ font-weight: 800; font-size: 13px; }
-  .ship-sub{ font-size: 12px; color: #6b7280; margin-top: 2px; }
-  .ship-option.active{
-    background: #fff7e6;
-    border-color: #d79b2e;
-    box-shadow: 0 10px 20px rgba(215,155,46,.15);
-  }
+.ship-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ship-option { display: flex; align-items: center; gap: 12px; padding: 16px; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: all 0.2s; position: relative; }
+.ship-option.active { border-color: #27ae60; background: #f0fff4; }
+.ship-option input { position: absolute; opacity: 0; pointer-events: none; }
+.ship-option label { cursor: pointer; width: 100%; }
+.ship-ico { font-size: 28px; }
+.ship-name { font-weight: 600; color: #2c3e50; }
+.ship-sub { font-size: 12px; color: #666; }
 
-  /* ====== field ====== */
-  .ck-field{ margin-top: 10px; }
-  .ck-label{ display:block; font-size: 12px; color:#374151; margin-bottom: 6px; font-weight: 700; }
-  .ck-input, .ck-textarea{
-    width: 100%;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 10px 12px;
-    outline: none;
-    font-size: 13px;
-    background: #fff;
-  }
-  .ck-textarea{ resize: vertical; }
+.ck-field { margin-bottom: 16px; }
+.ck-label { display: block; font-weight: 600; color: #2c3e50; margin-bottom: 6px; font-size: 14px; }
+.ck-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+.ck-textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; }
+.ck-hint { display: block; font-size: 12px; color: #666; margin-top: 4px; }
 
-  /* ====== payment rows ====== */
-  .pay-row{
-    display:flex;
-    gap: 10px;
-    padding: 10px 10px;
-    border-radius: 12px;
-    border: 1px solid #eee;
-    margin-top: 10px;
-    cursor:pointer;
-    align-items:flex-start;
-  }
-  .pay-row input{ margin-top: 3px; }
-  .pay-name{ font-weight: 800; font-size: 13px; }
-  .pay-sub{ font-size: 12px; color:#6b7280; margin-top: 2px; }
+.bank-item { display: flex; align-items: center; gap: 16px; padding: 16px; background: #f8f9fa; border-radius: 8px; margin-bottom: 12px; }
+.bank-icon { font-size: 32px; }
+.bank-info { flex: 1; }
+.bank-name { font-weight: 700; color: #2c3e50; }
+.bank-number { font-size: 16px; font-weight: 600; color: #27ae60; font-family: monospace; }
+.bank-holder { font-size: 13px; color: #666; }
+.btn-copy { padding: 8px 16px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.btn-copy:hover { background: #219a52; }
 
-  /* ====== summary kanan biar gak berdempetan ====== */
-  .ck-summary .ck-card-title{ margin-bottom: 10px; }
-  .summary-items{ display:flex; flex-direction:column; gap: 8px; }
-  .summary-item{ display:flex; justify-content:space-between; gap: 12px; font-size: 12.5px; }
-  .summary-item-name{ color:#111827; }
-  .summary-item-price{ color:#111827; font-weight:700; }
-  .muted{ color:#6b7280; font-weight:600; }
-  .summary-divider{ height:1px; background:#f0f0f0; margin: 12px 0; }
-  .summary-row{ display:flex; justify-content:space-between; align-items:center; font-size: 12.5px; padding: 6px 0; }
-  .summary-row .value{ font-weight: 800; }
-  .summary-total{
-    display:flex; justify-content:space-between; align-items:center;
-    margin-top: 10px;
-    padding-top: 12px;
-    border-top: 1px solid #f0f0f0;
-    font-size: 13px;
-  }
-  .summary-total .value{ font-weight: 900; color:#c27a00; }
+.alert-info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 16px; border-radius: 8px; font-size: 13px; }
+.alert-info ul { margin: 8px 0 0 20px; padding: 0; }
+.alert-info li { margin-bottom: 4px; }
+.mb-0 { margin-bottom: 0; }
+.mt-1 { margin-top: 8px; }
+.mt-3 { margin-top: 16px; }
 
-  .btn-pay{
-    width:100%;
-    border:0;
-    margin-top: 12px;
-    background:#c27a00;
-    color:#fff;
-    padding: 12px 14px;
-    border-radius: 12px;
-    font-weight: 800;
-    cursor:pointer;
-  }
-  .btn-pay:hover{ filter: brightness(.97); }
+.order-summary { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); position: sticky; top: 20px; }
+.summary-title { font-size: 18px; font-weight: 700; color: #2c3e50; margin-bottom: 16px; }
+.summary-item { display: flex; justify-content: space-between; margin-bottom: 12px; }
+.item-name { font-weight: 600; color: #2c3e50; }
+.item-qty { font-size: 13px; color: #666; }
+.item-total { font-weight: 600; color: #27ae60; }
+.summary-divider { height: 1px; background: #e9ecef; margin: 16px 0; }
+.summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+.summary-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; color: #2c3e50; margin-top: 16px; }
+.summary-total span:last-child { color: #27ae60; }
 
-  @media (max-width: 980px){
-    .checkout-grid{ grid-template-columns: 1fr; }
-  }
+.btn-checkout { width: 100%; padding: 16px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 20px; }
+.btn-checkout:hover { background: #219a52; }
 </style>
 
 <script>
-  (function(){
-    const shipRadios = document.querySelectorAll('input[name="shipping_method"]');
-    const shipOptions = document.querySelectorAll('.ship-option');
-    const shippingCostInput = document.getElementById('shippingCostInput');
-    const shippingRow = document.getElementById('shippingRow');
-    const shippingText = document.getElementById('shippingText');
-    const totalText = document.getElementById('totalText');
-    const subtotal = {{ (int)$subtotal }};
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        alert('Nomor berhasil dicopy: ' + text);
+    }, function(err) {
+        console.error('Gagal copy: ', err);
+    });
+}
+
+// Update active state for shipping options
+function updateShippingActiveState() {
+    const options = document.querySelectorAll('.ship-option');
+    options.forEach(option => {
+        const radio = option.querySelector('input[type="radio"]');
+        if (radio.checked) {
+            option.classList.add('active');
+        } else {
+            option.classList.remove('active');
+        }
+    });
+}
+
+// Toggle address field based on shipping method
+function initShippingToggle() {
+    const radios = document.querySelectorAll('input[name="shipping_method"]');
     const addressCard = document.getElementById('addressCard');
-
-    function rupiah(n){
-      return 'Rp ' + (n || 0).toLocaleString('id-ID');
+    const addressInput = document.getElementById('addressInput');
+    const shippingCostEl = document.getElementById('shippingCost');
+    const totalAmountEl = document.getElementById('totalAmount');
+    const subtotal = {{ $subtotal }};
+    
+    // Initial active state
+    updateShippingActiveState();
+    
+    radios.forEach(radio => {
+        // Update on change
+        radio.addEventListener('change', function() {
+            updateShippingActiveState();
+            
+            if (this.value === 'pickup') {
+                if (addressCard) addressCard.style.display = 'none';
+                if (addressInput) {
+                    addressInput.required = false;
+                    addressInput.value = '';
+                }
+                if (shippingCostEl) shippingCostEl.textContent = 'Rp 0';
+                if (totalAmountEl) totalAmountEl.textContent = 'Rp ' + subtotal.toLocaleString('id-ID');
+            } else {
+                if (addressCard) addressCard.style.display = 'block';
+                if (addressInput) {
+                    addressInput.required = true;
+                }
+                if (shippingCostEl) shippingCostEl.textContent = 'Rp 10.000';
+                if (totalAmountEl) totalAmountEl.textContent = 'Rp ' + (subtotal + 10000).toLocaleString('id-ID');
+            }
+        });
+        
+        // Also update on click (for faster response)
+        radio.addEventListener('click', function() {
+            updateShippingActiveState();
+        });
+    });
+    
+    // Trigger initial state for pickup
+    const checked = document.querySelector('input[name="shipping_method"]:checked');
+    if (checked && checked.value === 'pickup') {
+        if (addressCard) addressCard.style.display = 'none';
+        if (addressInput) addressInput.required = false;
+        if (shippingCostEl) shippingCostEl.textContent = 'Rp 0';
+        if (totalAmountEl) totalAmountEl.textContent = 'Rp ' + subtotal.toLocaleString('id-ID');
     }
+}
 
-    function setActive(){
-      let method = 'delivery';
-      shipRadios.forEach(r => { if (r.checked) method = r.value; });
-
-      shipOptions.forEach(opt => opt.classList.remove('active'));
-      document.querySelectorAll('.ship-option input').forEach(input => {
-        if(input.checked) input.closest('.ship-option').classList.add('active');
-      });
-
-      const shipCost = (method === 'delivery') ? 10000 : 0;
-
-      shippingCostInput.value = shipCost;
-      shippingText.textContent = rupiah(shipCost);
-      totalText.textContent = rupiah(subtotal + shipCost);
-
-      // kalau pickup, sembunyikan alamat (sesuai figma)
-      if(method === 'pickup'){
-        addressCard.style.display = 'none';
-      }else{
-        addressCard.style.display = '';
-      }
-    }
-
-    shipRadios.forEach(r => r.addEventListener('change', setActive));
-    setActive();
-  })();
+// Initialize on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initShippingToggle);
+} else {
+    initShippingToggle();
+}
 </script>
 @endsection

@@ -37,4 +37,19 @@ return [
         'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
     ],
 
+    'bank_accounts' => [
+        [
+            'bank_name' => 'BRI',
+            'account_number' => '341901058068539',
+            'account_holder' => 'Durian Lovers',
+            'type' => 'bank',
+        ],
+        [
+            'bank_name' => 'DANA',
+            'account_number' => '081352953905',
+            'account_holder' => 'Durian Lovers',
+            'type' => 'ewallet',
+        ],
+    ],
+
 ];

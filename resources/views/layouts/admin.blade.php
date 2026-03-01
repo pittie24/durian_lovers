@@ -22,6 +22,7 @@
     <a href="/admin/dashboard" class="{{ request()->is('admin/dashboard*') ? 'active' : '' }}">Dashboard</a>
     <a href="/admin/produk" class="{{ request()->is('admin/produk*') ? 'active' : '' }}">Produk</a>
     <a href="/admin/pesanan" class="{{ request()->is('admin/pesanan*') ? 'active' : '' }}">Pesanan</a>
+    <a href="/admin/payment-confirmations" class="{{ request()->is('admin/payment-confirmations*') ? 'active' : '' }}">Konfirmasi Pembayaran</a>
     <a href="/admin/laporan" class="{{ request()->is('admin/laporan*') ? 'active' : '' }}">Laporan</a>
     <a href="/admin/pelanggan" class="{{ request()->is('admin/pelanggan*') ? 'active' : '' }}">Pelanggan</a>
 

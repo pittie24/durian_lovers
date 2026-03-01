@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
-use App\Services\MidtransService;
+use App\Models\PaymentConfirmation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class CheckoutController extends Controller
 {
@@ -29,7 +30,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function store(Request $request, MidtransService $midtrans)
+    public function store(Request $request)
     {
         // Validasi dasar dulu
         $data = $request->validate([
@@ -37,6 +38,10 @@ class CheckoutController extends Controller
             'payment_method'  => ['required'],
             'phone'           => ['nullable', 'min:10'],
             'address'         => ['nullable'],
+            // Payment confirmation fields
+            'account_name'    => ['required', 'string', 'max:255'],
+            'transfer_amount' => ['required', 'numeric', 'min:0'],
+            'proof_image'     => ['required', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
         // Kalau delivery, phone & address wajib
@@ -98,19 +103,35 @@ class CheckoutController extends Controller
                 ->decrement('stock', $item['quantity']);
         }
 
-        $payment = Payment::create([
+        // Create payment record with PENDING status
+        Payment::create([
             'order_id'        => $order->id,
-            'provider'        => 'midtrans',
+            'provider'        => 'manual_transfer',
             'status'          => 'PENDING',
             'payment_method'  => $data['payment_method'],
         ]);
 
-        $snapToken = $midtrans->createSnapToken($order);
-        $payment->update(['snap_token' => $snapToken]);
+        // Upload proof image and create payment confirmation
+        if ($request->hasFile('proof_image')) {
+            $image = $request->file('proof_image');
+            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('payment-confirmations', $imageName, 'public');
+
+            PaymentConfirmation::create([
+                'order_id' => $order->id,
+                'user_id' => Auth::id(),
+                'proof_image' => $imagePath,
+                'bank_name' => $data['payment_method'],
+                'account_name' => $data['account_name'],
+                'transfer_amount' => $data['transfer_amount'],
+                'status' => 'PENDING',
+            ]);
+        }
 
         $request->session()->forget('cart');
 
-        return redirect('/pembayaran/' . $order->id);
+        // Redirect to tracking page
+        return redirect('/status-pesanan/' . $order->id)->with('success', 'Pesanan berhasil dibuat! Bukti pembayaran sudah diupload dan menunggu verifikasi admin.');
     }
 
     /**

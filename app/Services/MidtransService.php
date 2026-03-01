@@ -23,8 +23,8 @@ class MidtransService
     {
         $params = [
             'transaction_details' => [
-                'order_id' => $order->order_number . '-' . time(),
-                'gross_amount' => $order->total_amount,
+                'order_id' => $order->id,
+                'gross_amount' => $order->total,
             ],
             'customer_details' => [
                 'first_name' => $order->customer->name,
@@ -32,6 +32,9 @@ class MidtransService
                 'phone' => $order->customer->phone ?? '',
             ],
             'item_details' => $this->getItemDetails($order),
+            'callbacks' => [
+                'finish' => url('/pembayaran/' . $order->id . '/return?order_id=' . $order->id),
+            ],
         ];
 
         try {
