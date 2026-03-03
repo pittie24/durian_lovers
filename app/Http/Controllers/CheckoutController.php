@@ -87,7 +87,7 @@ class CheckoutController extends Controller
 
         $order = Order::create([
             'user_id'          => Auth::id(),
-            'status'           => 'MENUNGGU_PEMBAYARAN',
+            'status'           => 'PESANAN_DITERIMA',
             'shipping_method'  => $data['shipping_method'],
             'payment_method'   => $data['payment_method'],
             'phone'            => $data['phone'],

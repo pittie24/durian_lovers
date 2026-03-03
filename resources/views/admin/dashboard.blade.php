@@ -1,5 +1,7 @@
 @extends('layouts.admin')
 
+@section('hideBackButton', '1')
+
 @section('content')
 <div class="container">
   <h1 class="page-title">Dashboard</h1>

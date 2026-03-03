@@ -5,6 +5,9 @@
   $shippingMethod = old('shipping_method', 'delivery');
   $cartItems = $cart ?? [];
   $subtotal = $summary['subtotal'] ?? 0;
+  $totalItems = collect($cartItems)->sum(function ($item) {
+    return (int) ($item['quantity'] ?? 0);
+  });
   $shippingCost = ($shippingMethod === 'delivery') ? 10000 : 0;
   $total = $subtotal + $shippingCost;
   $defaultPhone = old('phone', auth()->user()->phone ?? '');
@@ -12,6 +15,19 @@
 @endphp
 
 <div class="checkout-page">
+  {{-- Steps / Progress --}}
+  <div class="ck-steps">
+    <div class="ck-step done">
+      <span class="dot">✓</span><span>Keranjang</span>
+    </div>
+    <div class="ck-step active">
+      <span class="dot">2</span><span>Pembayaran</span>
+    </div>
+    <div class="ck-step">
+      <span class="dot">3</span><span>Verifikasi</span>
+    </div>
+  </div>
+
   <h1 class="checkout-title">Pembayaran</h1>
 
   <form method="POST" action="{{ url('/pembayaran') }}" class="checkout-grid" enctype="multipart/form-data">
@@ -31,6 +47,7 @@
               <div class="ship-name">Dikirim</div>
               <div class="ship-sub">Ongkir Rp 10.000</div>
             </div>
+            <div class="ship-check">✓</div>
           </label>
 
           <label class="ship-option {{ $shippingMethod==='pickup' ? 'active' : '' }}">
@@ -40,6 +57,7 @@
               <div class="ship-name">Ambil di Toko</div>
               <div class="ship-sub">Gratis</div>
             </div>
+            <div class="ship-check">✓</div>
           </label>
         </div>
       </div>
@@ -47,6 +65,7 @@
       {{-- ALAMAT PENGIRIMAN --}}
       <div class="ck-card" id="addressCard">
         <div class="ck-card-title">Alamat Pengiriman</div>
+
         <div class="ck-field">
           <label class="ck-label">Nomor Telepon</label>
           <input
@@ -60,6 +79,7 @@
             data-default-value="{{ $defaultPhone }}"
           >
         </div>
+
         <div class="ck-field">
           <label class="ck-label">Alamat Lengkap</label>
           <textarea
@@ -78,7 +98,7 @@
       <div class="ck-card">
         <div class="ck-card-title">Metode Pembayaran</div>
         <p class="payment-info-text">Silakan transfer ke salah satu rekening berikut:</p>
-        
+
         <div class="bank-item">
           <div class="bank-icon">🏦</div>
           <div class="bank-info">
@@ -86,7 +106,7 @@
             <div class="bank-number">341901058068539</div>
             <div class="bank-holder">a.n Durian Lovers</div>
           </div>
-          <button type="button" class="btn-copy" onclick="copyToClipboard('341901058068539')">📋 Copy</button>
+          <button type="button" class="btn-copy" data-copy="341901058068539">📋 Copy</button>
         </div>
 
         <div class="bank-item">
@@ -96,7 +116,7 @@
             <div class="bank-number">081352953905</div>
             <div class="bank-holder">a.n Durian Lovers</div>
           </div>
-          <button type="button" class="btn-copy" onclick="copyToClipboard('081352953905')">📋 Copy</button>
+          <button type="button" class="btn-copy" data-copy="081352953905">📋 Copy</button>
         </div>
 
         <div class="ck-field mt-3">
@@ -112,19 +132,29 @@
       {{-- UPLOAD BUKTI PEMBAYARAN --}}
       <div class="ck-card">
         <div class="ck-card-title">📷 Upload Bukti Pembayaran</div>
+
         <div class="ck-field">
           <label class="ck-label">Nama Pengirim</label>
           <input class="ck-input" type="text" name="account_name" value="{{ auth()->user()->name }}" required>
         </div>
+
         <div class="ck-field">
           <label class="ck-label">Nominal Transfer (Rp)</label>
-          <input class="ck-input" type="number" name="transfer_amount" value="{{ old('transfer_amount', $total) }}" required>
+          <input class="ck-input" type="number" name="transfer_amount" value="{{ old('transfer_amount', $total) }}" required id="transferAmountInput">
         </div>
+
         <div class="ck-field">
           <label class="ck-label">Upload Bukti Transfer</label>
-          <input class="ck-input" type="file" name="proof_image" accept="image/*" required>
+          <input class="ck-input" type="file" name="proof_image" accept="image/*" required id="proofInput">
           <small class="ck-hint">Format: JPG, PNG. Maksimal 2MB</small>
+
+          {{-- TANPA PREVIEW: hanya nama file + tombol hapus --}}
+          <div class="proof-file-info" id="proofFileInfo" style="display:none;">
+            <span class="proof-filename" id="proofFileName">-</span>
+            <button type="button" class="proof-remove" id="proofRemoveBtn">Hapus</button>
+          </div>
         </div>
+
         <div class="alert-info">
           <strong>📌 Penting:</strong>
           <ul class="mb-0 mt-1">
@@ -141,7 +171,7 @@
     <div class="checkout-right">
       <div class="order-summary">
         <h3 class="summary-title">Ringkasan Pesanan</h3>
-        
+
         <div class="summary-items">
           @foreach($cartItems as $id => $item)
             <div class="summary-item">
@@ -157,8 +187,11 @@
         <div class="summary-divider"></div>
 
         <div class="summary-row">
-          <span>Subtotal</span>
-          <span>Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
+          <span>Total Item</span>
+          <span>
+            {{ $totalItems }}
+            <span id="subtotalAmount" data-subtotal="{{ (int) $subtotal }}" style="display:none;"></span>
+          </span>
         </div>
 
         <div class="summary-row">
@@ -173,172 +206,486 @@
           <span id="totalAmount">Rp {{ number_format($total, 0, ',', '.') }}</span>
         </div>
 
-        <button type="submit" class="btn-checkout">
+        <button type="submit" class="btn-checkout" id="payBtn">
           ✅ Buat Pesanan & Bayar
         </button>
+
+        <div class="summary-safe">
+          🔒 Data pembayaran kamu aman. Admin akan verifikasi bukti transfer.
+        </div>
       </div>
     </div>
+
   </form>
 </div>
 
+{{-- Toast --}}
+<div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
+
 <style>
-.checkout-page { max-width: 1100px; margin: 0 auto; }
-.checkout-title { font-size: 28px; font-weight: 700; color: #2c3e50; margin-bottom: 24px; }
-.checkout-grid { display: grid; grid-template-columns: 1fr 380px; gap: 24px; }
-@media (max-width: 768px) { .checkout-grid { grid-template-columns: 1fr; } }
+  /* Page */
+  .checkout-page{ max-width: 1100px; margin: 0 auto; }
+  .checkout-title{ font-size: 28px; font-weight: 800; color: #1f2937; margin: 8px 0 18px; letter-spacing: -.02em; }
 
-.ck-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-.ck-card-title { font-size: 18px; font-weight: 700; color: #2c3e50; margin-bottom: 16px; }
-.payment-info-text { color: #666; font-size: 14px; margin-bottom: 16px; }
+  /* Steps */
+  .ck-steps{
+    display:flex;
+    gap: 10px;
+    align-items:center;
+    margin: 8px 0 10px;
+    flex-wrap: wrap;
+  }
+  .ck-step{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.75);
+    border: 1px solid rgba(0,0,0,.06);
+    box-shadow: 0 10px 22px rgba(0,0,0,.05);
+    font-weight: 800;
+    font-size: 13px;
+    color: rgba(31,41,55,.72);
+  }
+  .ck-step .dot{
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,.06);
+    color: rgba(31,41,55,.85);
+    font-size: 12px;
+  }
+  .ck-step.active{
+    background: rgba(244,180,0,.16);
+    border-color: rgba(244,180,0,.25);
+    color:#6b4b00;
+  }
+  .ck-step.active .dot{ background: #f4b400; color:#fff; }
+  .ck-step.done{
+    background: rgba(34,197,94,.14);
+    border-color: rgba(34,197,94,.18);
+    color:#14532d;
+  }
+  .ck-step.done .dot{ background: #22c55e; color:#fff; }
 
-.ship-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.ship-option { display: flex; align-items: center; gap: 12px; padding: 16px; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: all 0.2s; position: relative; }
-.ship-option.active { border-color: #27ae60; background: #f0fff4; }
-.ship-option input { position: absolute; opacity: 0; pointer-events: none; }
-.ship-option label { cursor: pointer; width: 100%; }
-.ship-ico { font-size: 28px; }
-.ship-name { font-weight: 600; color: #2c3e50; }
-.ship-sub { font-size: 12px; color: #666; }
+  /* Layout */
+  .checkout-grid{ display:grid; grid-template-columns: 1fr 380px; gap: 24px; }
+  @media (max-width: 900px){ .checkout-grid{ grid-template-columns: 1fr; } }
 
-.ck-field { margin-bottom: 16px; }
-.ck-label { display: block; font-weight: 600; color: #2c3e50; margin-bottom: 6px; font-size: 14px; }
-.ck-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
-.ck-textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; }
-.ck-hint { display: block; font-size: 12px; color: #666; margin-top: 4px; }
+  /* Cards */
+  .ck-card{
+    background:#fff;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 14px 30px rgba(0,0,0,.06);
+    border: 1px solid rgba(0,0,0,.04);
+  }
+  .ck-card-title{ font-size: 16px; font-weight: 900; color:#111827; margin-bottom: 14px; }
 
-.bank-item { display: flex; align-items: center; gap: 16px; padding: 16px; background: #f8f9fa; border-radius: 8px; margin-bottom: 12px; }
-.bank-icon { font-size: 32px; }
-.bank-info { flex: 1; }
-.bank-name { font-weight: 700; color: #2c3e50; }
-.bank-number { font-size: 16px; font-weight: 600; color: #27ae60; font-family: monospace; }
-.bank-holder { font-size: 13px; color: #666; }
-.btn-copy { padding: 8px 16px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
-.btn-copy:hover { background: #219a52; }
+  /* Shipping options */
+  .ship-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px){ .ship-grid{ grid-template-columns: 1fr; } }
 
-.alert-info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 16px; border-radius: 8px; font-size: 13px; }
-.alert-info ul { margin: 8px 0 0 20px; padding: 0; }
-.alert-info li { margin-bottom: 4px; }
-.mb-0 { margin-bottom: 0; }
-.mt-1 { margin-top: 8px; }
-.mt-3 { margin-top: 16px; }
+  .ship-option{
+    display:flex; align-items:center; gap: 12px;
+    padding: 14px;
+    border: 2px solid #f1f5f9;
+    border-radius: 12px;
+    cursor:pointer;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .2s ease, background .2s ease;
+    position:relative;
+    background:#fff;
+  }
+  .ship-option:hover{
+    transform: translateY(-3px);
+    box-shadow: 0 16px 30px rgba(0,0,0,.08);
+  }
+  .ship-option.active{
+    border-color: rgba(34,197,94,.55);
+    background: rgba(34,197,94,.08);
+  }
+  .ship-option input{ position:absolute; opacity:0; pointer-events:none; }
+  .ship-ico{ font-size: 26px; }
+  .ship-name{ font-weight: 900; color:#111827; }
+  .ship-sub{ font-size: 12px; color: rgba(17,24,39,.65); font-weight: 700; }
+  .ship-check{
+    margin-left:auto;
+    width: 22px; height: 22px;
+    border-radius: 999px;
+    display:flex; align-items:center; justify-content:center;
+    background: rgba(0,0,0,.06);
+    color: transparent;
+    font-weight: 900;
+    transition: .2s ease;
+  }
+  .ship-option.active .ship-check{
+    background: #22c55e;
+    color:#fff;
+  }
 
-.order-summary { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); position: sticky; top: 20px; }
-.summary-title { font-size: 18px; font-weight: 700; color: #2c3e50; margin-bottom: 16px; }
-.summary-item { display: flex; justify-content: space-between; margin-bottom: 12px; }
-.item-name { font-weight: 600; color: #2c3e50; }
-.item-qty { font-size: 13px; color: #666; }
-.item-total { font-weight: 600; color: #27ae60; }
-.summary-divider { height: 1px; background: #e9ecef; margin: 16px 0; }
-.summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
-.summary-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; color: #2c3e50; margin-top: 16px; }
-.summary-total span:last-child { color: #27ae60; }
+  /* Fields */
+  .ck-field{ margin-bottom: 14px; }
+  .ck-label{ display:block; font-weight: 800; color:#111827; margin-bottom: 6px; font-size: 13px; }
+  .ck-input, .ck-textarea{
+    width:100%;
+    padding: 12px;
+    border: 1px solid rgba(231,220,200,.9);
+    border-radius: 12px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: box-shadow .15s ease, border-color .15s ease, transform .15s ease;
+    background:#fff;
+  }
+  .ck-input:focus, .ck-textarea:focus{
+    border-color: rgba(244,180,0,.65);
+    box-shadow: 0 0 0 4px rgba(244,180,0,.16);
+  }
+  .ck-hint{ display:block; font-size: 12px; color: rgba(17,24,39,.55); margin-top: 6px; font-weight: 700; }
 
-.btn-checkout { width: 100%; padding: 16px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 20px; }
-.btn-checkout:hover { background: #219a52; }
+  /* Bank items */
+  .payment-info-text{ color: rgba(17,24,39,.6); font-size: 13px; margin-bottom: 12px; font-weight: 700; }
+  .bank-item{
+    display:flex; align-items:center; gap: 14px;
+    padding: 14px;
+    background: rgba(248,250,252,.8);
+    border: 1px solid rgba(0,0,0,.04);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .bank-item:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 14px 26px rgba(0,0,0,.06);
+  }
+  .bank-icon{ font-size: 28px; }
+  .bank-info{ flex:1; }
+  .bank-name{ font-weight: 900; color:#111827; }
+  .bank-number{ font-size: 15px; font-weight: 900; color: #16a34a; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  .bank-holder{ font-size: 12px; color: rgba(17,24,39,.6); font-weight: 700; }
+
+  .btn-copy{
+    padding: 10px 12px;
+    background: rgba(244,180,0,.18);
+    color: #6b4b00;
+    border: 1px solid rgba(244,180,0,.25);
+    border-radius: 12px;
+    cursor:pointer;
+    font-weight: 900;
+    transition: transform .12s ease, filter .2s ease;
+    white-space: nowrap;
+  }
+  .btn-copy:hover{ filter: brightness(.98); }
+  .btn-copy:active{ transform: scale(.98); }
+  .btn-copy.copied{
+    background: rgba(34,197,94,.14);
+    border-color: rgba(34,197,94,.2);
+    color:#14532d;
+  }
+
+  /* TANPA PREVIEW (hanya nama file + tombol hapus) */
+  .proof-file-info{
+    margin-top: 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(248,250,252,.8);
+    border: 1px solid rgba(0,0,0,.06);
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .proof-filename{
+    font-size: 12px;
+    font-weight: 800;
+    color: rgba(17,24,39,.75);
+    overflow:hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .proof-remove{
+    border: 0;
+    background: rgba(239,68,68,.12);
+    color:#991b1b;
+    font-weight: 900;
+    border-radius: 12px;
+    padding: 8px 10px;
+    cursor:pointer;
+  }
+  .proof-remove:active{ transform: scale(.98); }
+
+  /* Alert info */
+  .alert-info{
+    background: rgba(59,130,246,.10);
+    border: 1px solid rgba(59,130,246,.18);
+    color: #0b3a63;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .alert-info ul{ margin: 10px 0 0 18px; padding: 0; }
+  .alert-info li{ margin-bottom: 6px; }
+
+  /* Summary */
+  .order-summary{
+    background:#fff;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 16px 34px rgba(0,0,0,.08);
+    position: sticky;
+    top: 20px;
+    border: 1px solid rgba(0,0,0,.04);
+  }
+  .summary-title{ font-size: 16px; font-weight: 900; color:#111827; margin-bottom: 14px; }
+  .summary-item{ display:flex; justify-content:space-between; gap: 12px; margin-bottom: 10px; }
+  .item-name{ font-weight: 900; color:#111827; }
+  .item-qty{ font-size: 12px; color: rgba(17,24,39,.6); font-weight: 700; margin-top: 2px; }
+  .item-total{ font-weight: 900; color:#16a34a; white-space: nowrap; }
+
+  .summary-divider{ height: 1px; background: rgba(0,0,0,.06); margin: 14px 0; }
+  .summary-row{ display:flex; justify-content:space-between; margin-bottom: 8px; font-size: 14px; font-weight: 800; color: rgba(17,24,39,.8); }
+
+  .summary-total{
+    display:flex; justify-content:space-between;
+    font-size: 16px; font-weight: 900; color:#111827; margin-top: 10px;
+  }
+  .summary-total span:last-child{ color:#16a34a; }
+
+  .btn-checkout{
+    width: 100%;
+    padding: 14px;
+    background: #16a34a;
+    color:#fff;
+    border: 0;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 900;
+    cursor:pointer;
+    margin-top: 14px;
+    transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+  }
+  .btn-checkout:hover{
+    box-shadow: 0 18px 40px rgba(22,163,74,.22);
+    filter: brightness(.99);
+  }
+  .btn-checkout:active{ transform: scale(.99); }
+  .btn-checkout.is-loading{ opacity:.75; pointer-events:none; }
+
+  .summary-safe{
+    margin-top: 12px;
+    font-size: 12px;
+    font-weight: 800;
+    color: rgba(17,24,39,.60);
+    text-align:center;
+  }
+
+  /* Smooth collapse for address */
+  #addressCard{
+    transform-origin: top;
+    transition: opacity .2s ease, transform .2s ease, height .2s ease, margin .2s ease;
+  }
+  #addressCard.is-hidden{
+    opacity: 0;
+    transform: translateY(-6px);
+    height: 0;
+    overflow: hidden;
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border: 0;
+  }
+
+  /* Toast top */
+  .toast{
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: #111827;
+    color:#fff;
+    padding: 12px 18px;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(0,0,0,.25);
+    opacity: 0;
+    transition: .25s ease;
+    z-index: 9999;
+    font-weight: 900;
+    font-size: 13px;
+  }
+  .toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* helpers */
+  .mb-0{ margin-bottom:0; }
+  .mt-1{ margin-top:8px; }
+  .mt-3{ margin-top:16px; }
 </style>
 
 <script>
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(function() {
-        alert('Nomor berhasil dicopy: ' + text);
-    }, function(err) {
-        console.error('Gagal copy: ', err);
-    });
-}
+  function formatRupiah(number){
+    try {
+      return 'Rp ' + Number(number || 0).toLocaleString('id-ID');
+    } catch(e){
+      return 'Rp ' + (number || 0);
+    }
+  }
 
-// Update active state for shipping options
-function updateShippingActiveState() {
-    const options = document.querySelectorAll('.ship-option');
-    options.forEach(option => {
-        const radio = option.querySelector('input[type="radio"]');
-        if (radio.checked) {
-            option.classList.add('active');
-        } else {
-            option.classList.remove('active');
+  // Toast
+  let toastTimer = null;
+  function showToast(msg){
+    const el = document.getElementById('toast');
+    if(!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  // Copy handlers (no more alert)
+  async function copyText(text){
+    await navigator.clipboard.writeText(text);
+  }
+
+  function bindCopyButtons(){
+    document.querySelectorAll('.btn-copy[data-copy]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const text = btn.getAttribute('data-copy');
+        try{
+          await copyText(text);
+          btn.classList.add('copied');
+          const old = btn.textContent;
+          btn.textContent = '✅ Copied';
+          showToast('Nomor berhasil disalin');
+          setTimeout(() => {
+            btn.textContent = old;
+            btn.classList.remove('copied');
+          }, 1400);
+        }catch(e){
+          showToast('Gagal menyalin. Silakan copy manual.');
         }
+      });
     });
-}
+  }
 
-// Toggle address field based on shipping method
-function initShippingToggle() {
+  // Update active state for shipping options
+  function updateShippingActiveState() {
+    document.querySelectorAll('.ship-option').forEach(option => {
+      const radio = option.querySelector('input[type="radio"]');
+      option.classList.toggle('active', !!(radio && radio.checked));
+    });
+  }
+
+  // Toggle address field + update summary amounts
+  function initShippingToggle() {
     const radios = document.querySelectorAll('input[name="shipping_method"]');
     const addressCard = document.getElementById('addressCard');
     const addressInput = document.getElementById('addressInput');
     const phoneInput = document.getElementById('phoneInput');
-    const transferAmountInput = document.querySelector('input[name="transfer_amount"]');
+    const transferAmountInput = document.getElementById('transferAmountInput');
     const shippingCostEl = document.getElementById('shippingCost');
     const totalAmountEl = document.getElementById('totalAmount');
-    const subtotal = {{ $subtotal }};
+    const subtotalEl = document.getElementById('subtotalAmount');
+    const subtotal = Number(subtotalEl?.dataset?.subtotal || 0);
 
     function applyShippingState(method) {
-        const isPickup = method === 'pickup';
-        const total = isPickup ? subtotal : subtotal + 10000;
-        const defaultPhone = phoneInput ? (phoneInput.dataset.defaultValue || '') : '';
-        const defaultAddress = addressInput ? (addressInput.dataset.defaultValue || '') : '';
+      const isPickup = method === 'pickup';
+      const shipping = isPickup ? 0 : 10000;
+      const total = subtotal + shipping;
 
-        if (addressCard) {
-            addressCard.style.display = isPickup ? 'none' : 'block';
-        }
+      const defaultPhone = phoneInput ? (phoneInput.dataset.defaultValue || '') : '';
+      const defaultAddress = addressInput ? (addressInput.dataset.defaultValue || '') : '';
 
-        if (phoneInput) {
-            phoneInput.required = !isPickup;
-            if (isPickup) {
-                phoneInput.value = '';
-            } else if (!phoneInput.value.trim()) {
-                phoneInput.value = defaultPhone;
-            }
-        }
+      if (addressCard) {
+        addressCard.classList.toggle('is-hidden', isPickup);
+      }
 
-        if (addressInput) {
-            addressInput.required = !isPickup;
-            if (isPickup) {
-                addressInput.value = '';
-            } else if (!addressInput.value.trim()) {
-                addressInput.value = defaultAddress;
-            }
-        }
+      if (phoneInput) {
+        phoneInput.required = !isPickup;
+        if (isPickup) phoneInput.value = '';
+        else if (!phoneInput.value.trim()) phoneInput.value = defaultPhone;
+      }
 
-        if (shippingCostEl) {
-            shippingCostEl.textContent = isPickup ? 'Rp 0' : 'Rp 10.000';
-        }
+      if (addressInput) {
+        addressInput.required = !isPickup;
+        if (isPickup) addressInput.value = '';
+        else if (!addressInput.value.trim()) addressInput.value = defaultAddress;
+      }
 
-        if (totalAmountEl) {
-            totalAmountEl.textContent = 'Rp ' + total.toLocaleString('id-ID');
-        }
+      if (shippingCostEl) shippingCostEl.textContent = formatRupiah(shipping);
+      if (totalAmountEl) totalAmountEl.textContent = formatRupiah(total);
+      if (transferAmountInput) transferAmountInput.value = total;
 
-        if (transferAmountInput) {
-            transferAmountInput.value = total;
-        }
+      showToast(isPickup ? 'Pengiriman: Ambil di Toko' : 'Pengiriman: Dikirim');
     }
-    
-    // Initial active state
+
     updateShippingActiveState();
-    
     radios.forEach(radio => {
-        // Update on change
-        radio.addEventListener('change', function() {
-            updateShippingActiveState();
-            applyShippingState(this.value);
-        });
-        
-        // Also update on click (for faster response)
-        radio.addEventListener('click', function() {
-            updateShippingActiveState();
-        });
+      radio.addEventListener('change', function() {
+        updateShippingActiveState();
+        applyShippingState(this.value);
+      });
     });
-    
-    // Trigger initial state for pickup
-    const checked = document.querySelector('input[name="shipping_method"]:checked');
-    if (checked) {
-        applyShippingState(checked.value);
-    }
-}
 
-// Initialize on page load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initShippingToggle);
-} else {
+    const checked = document.querySelector('input[name="shipping_method"]:checked');
+    if (checked) applyShippingState(checked.value);
+  }
+
+  // TANPA PREVIEW: hanya nama file + hapus
+  function initProofPreview(){
+    const input = document.getElementById('proofInput');
+    const wrap = document.getElementById('proofFileInfo');
+    const nameEl = document.getElementById('proofFileName');
+    const removeBtn = document.getElementById('proofRemoveBtn');
+
+    if(!input || !wrap || !nameEl || !removeBtn) return;
+
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      if(!file){
+        wrap.style.display = 'none';
+        return;
+      }
+
+      nameEl.textContent = file.name;
+      wrap.style.display = 'flex';
+      showToast('File dipilih: ' + file.name);
+    });
+
+    removeBtn.addEventListener('click', () => {
+      input.value = '';
+      wrap.style.display = 'none';
+      nameEl.textContent = '-';
+      showToast('File dihapus');
+    });
+  }
+
+  // Button loading state
+  function initPayLoading(){
+    const form = document.querySelector('form.checkout-grid');
+    const btn = document.getElementById('payBtn');
+    if(!form || !btn) return;
+
+    form.addEventListener('submit', () => {
+      btn.classList.add('is-loading');
+      btn.textContent = 'Memproses...';
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    bindCopyButtons();
     initShippingToggle();
-}
+    initProofPreview();
+    initPayLoading();
+  });
 </script>
 @endsection

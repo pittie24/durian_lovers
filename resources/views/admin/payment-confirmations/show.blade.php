@@ -5,19 +5,22 @@
     $payment = $order->payment;
     $isCashOrder = strtoupper((string) ($payment?->payment_method ?? $order->payment_method)) === 'CASH';
     $orderStatusLabels = [
+        'PESANAN_DITERIMA' => 'Pesanan Diterima',
         'MENUNGGU_PEMBAYARAN' => 'Menunggu Pembayaran',
         'SEDANG_DIPROSES' => 'Pesanan Dikemas',
-        'SIAP_DIAMBIL_DIKIRIM' => 'Pesanan Dikirim',
+        'SIAP_DIAMBIL_DIKIRIM' => 'Siap Dikirim/Siap Diambil',
         'SELESAI' => 'Selesai',
         'DIBATALKAN' => 'Dibatalkan',
     ];
     $currentOrderLabel = $orderStatusLabels[$order->status] ?? str_replace('_', ' ', $order->status);
     $isLocked = in_array($order->status, ['SELESAI', 'DIBATALKAN'], true);
-    $canManageStatus = !$isLocked && (
+    $isPaidOrder = in_array(strtoupper((string) ($payment?->status ?? '')), ['PAID', 'SETTLED', 'SETTLEMENT', 'CAPTURE'], true);
+    $canAdvanceStatus = !$isLocked && (
         $isCashOrder
-        || ($payment?->status === 'PAID')
+        || $isPaidOrder
         || ($confirmation && $confirmation->isApproved())
     );
+    $receivedActive = in_array($order->status, ['PESANAN_DITERIMA', 'MENUNGGU_PEMBAYARAN'], true);
     $statusRoute = $confirmation
         ? route('admin.payment-confirmations.order-status', $confirmation)
         : route('admin.payment-confirmations.order.status', $order);
@@ -25,18 +28,11 @@
 
 <div class="order-detail-page">
     <div class="page-head">
-        <div>
-            <h2>Detail Pesanan</h2>
-            @if(!$isCashOrder)
-                <p>Kelola verifikasi pembayaran dan progres pengiriman dalam satu halaman.</p>
-            @endif
-        </div>
+        <h2>Detail Pesanan</h2>
     </div>
-
     <div class="grid two-columns">
-        <div class="card hero-card">
+        <div class="card">
             <div class="card-body">
-                <div class="eyebrow">Ringkasan</div>
                 <div class="order-number">{{ $order->order_number }}</div>
 
                 <div class="badge-row">
@@ -130,22 +126,6 @@
                     </tr>
                 </table>
 
-                @if($confirmation && $confirmation->isApproved())
-                    <div class="alert alert-success mt-3">
-                        <strong>Disetujui oleh:</strong> {{ $confirmation->verifiedBy?->name ?? 'N/A' }}<br>
-                        <strong>Pada:</strong> {{ $confirmation->verified_at?->format('d M Y, H:i') ?? '-' }}
-                    </div>
-                @elseif($confirmation && $confirmation->isRejected())
-                    <div class="alert alert-danger mt-3">
-                        <strong>Ditolak oleh:</strong> {{ $confirmation->verifiedBy?->name ?? 'N/A' }}<br>
-                        <strong>Pada:</strong> {{ $confirmation->verified_at?->format('d M Y, H:i') ?? '-' }}<br>
-                        <strong>Alasan:</strong> {{ $confirmation->notes }}
-                    </div>
-                @elseif($isCashOrder)
-                    <div class="alert alert-cash mt-3">
-                        Pembayaran cash langsung ditandai lunas saat pesanan dibuat.
-                    </div>
-                @endif
             </div>
         </div>
     </div>
@@ -170,20 +150,28 @@
                 <h4>Verifikasi Pembayaran</h4>
 
                 <div class="action-buttons">
-                    <form action="{{ route('admin.payment-confirmations.approve', $confirmation) }}" method="POST" class="inline-form">
+                    <form action="{{ route('admin.payment-confirmations.approve', $confirmation) }}" method="POST" class="verify-card verify-card-approve">
                         @csrf
-                        <button type="submit" class="btn btn-success" onclick="return confirm('Apakah Anda yakin ingin menyetujui konfirmasi pembayaran ini?')">
+                        <div class="verify-card-head">
+                            <span class="verify-card-label">Setujui</span>
+                            <p>Pembayaran valid dan pesanan siap dilanjutkan ke tahap berikutnya.</p>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-block" onclick="return confirm('Apakah Anda yakin ingin menyetujui konfirmasi pembayaran ini?')">
                             Setujui Pembayaran
                         </button>
                     </form>
 
-                    <form action="{{ route('admin.payment-confirmations.reject', $confirmation) }}" method="POST" class="reject-form">
+                    <form action="{{ route('admin.payment-confirmations.reject', $confirmation) }}" method="POST" class="verify-card verify-card-reject">
                         @csrf
-                        <div class="form-group">
-                            <label for="reject-notes">Alasan Penolakan</label>
-                            <textarea name="notes" id="reject-notes" class="form-control" rows="3" required placeholder="Jelaskan alasan penolakan..."></textarea>
+                        <div class="verify-card-head">
+                            <span class="verify-card-label">Tolak</span>
+                            <p>Isi alasan penolakan dengan singkat dan jelas untuk pelanggan.</p>
                         </div>
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('Apakah Anda yakin ingin menolak konfirmasi pembayaran ini?')">
+                        <div class="form-group form-group-tight">
+                            <label for="reject-notes">Alasan Penolakan</label>
+                            <textarea name="notes" id="reject-notes" class="form-control reject-textarea" rows="3" required placeholder="Jelaskan alasan penolakan..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-danger btn-block" onclick="return confirm('Apakah Anda yakin ingin menolak konfirmasi pembayaran ini?')">
                             Tolak Pembayaran
                         </button>
                     </form>
@@ -192,53 +180,60 @@
         </div>
     @endif
 
-    @if(!$isCashOrder)
-        <div class="card mt-4">
-            <div class="card-body">
-                <div class="section-head">
-                    <h4>Status Pesanan</h4>
-                    <span class="section-note">
-                        @if($isLocked)
-                            Status sudah terkunci.
-                        @elseif(!$canManageStatus)
-                            Selesaikan pembayaran terlebih dahulu sebelum memproses pesanan.
-                        @else
-                            Pilih progres pesanan berikutnya.
-                        @endif
-                    </span>
-                </div>
+    <div class="card mt-4">
+        <div class="card-body">
+            <div class="section-head">
+                <h4>Status Pesanan</h4>
+                <span class="section-note">
+                    @if($isLocked)
+                        Status sudah terkunci.
+                    @elseif(!$canAdvanceStatus)
+                        Pesanan ada di tahap diterima. Setujui pembayaran terlebih dahulu sebelum lanjut ke tahap berikutnya.
+                    @else
+                        Pilih progres pesanan berikutnya.
+                    @endif
+                </span>
+            </div>
 
-                <div class="status-actions">
-                    <form action="{{ $statusRoute }}" method="POST" class="status-form">
-                        @csrf
-                        <input type="hidden" name="status" value="SEDANG_DIPROSES">
-                        <button type="submit" class="status-btn pack {{ $order->status === 'SEDANG_DIPROSES' ? 'is-active' : '' }}" {{ !$canManageStatus ? 'disabled' : '' }}>
-                            <span class="status-btn-title">Pesanan Dikemas</span>
-                            <span class="status-btn-sub">Siapkan dan proses pesanan</span>
-                        </button>
-                    </form>
+            <div class="status-actions status-actions-four">
+                <form action="{{ $statusRoute }}" method="POST" class="status-form">
+                    @csrf
+                    <input type="hidden" name="status" value="PESANAN_DITERIMA">
+                    <button type="submit" class="status-btn received {{ $receivedActive ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
+                        <span class="status-btn-title">Pesanan Diterima</span>
+                        <span class="status-btn-sub">Tahap awal setelah pesanan masuk</span>
+                    </button>
+                </form>
 
-                    <form action="{{ $statusRoute }}" method="POST" class="status-form">
-                        @csrf
-                        <input type="hidden" name="status" value="SIAP_DIAMBIL_DIKIRIM">
-                        <button type="submit" class="status-btn ship {{ $order->status === 'SIAP_DIAMBIL_DIKIRIM' ? 'is-active' : '' }}" {{ !$canManageStatus ? 'disabled' : '' }}>
-                            <span class="status-btn-title">Pesanan Dikirim</span>
-                            <span class="status-btn-sub">Tandai pesanan siap kirim</span>
-                        </button>
-                    </form>
+                <form action="{{ $statusRoute }}" method="POST" class="status-form">
+                    @csrf
+                    <input type="hidden" name="status" value="SEDANG_DIPROSES">
+                    <button type="submit" class="status-btn pack {{ $order->status === 'SEDANG_DIPROSES' ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
+                        <span class="status-btn-title">Pesanan Dikemas</span>
+                        <span class="status-btn-sub">Siapkan dan proses pesanan</span>
+                    </button>
+                </form>
 
-                    <form action="{{ $statusRoute }}" method="POST" class="status-form">
-                        @csrf
-                        <input type="hidden" name="status" value="SELESAI">
-                        <button type="submit" class="status-btn done {{ $order->status === 'SELESAI' ? 'is-active' : '' }}" {{ !$canManageStatus ? 'disabled' : '' }}>
-                            <span class="status-btn-title">Selesai</span>
-                            <span class="status-btn-sub">Tutup proses pesanan</span>
-                        </button>
-                    </form>
-                </div>
+                <form action="{{ $statusRoute }}" method="POST" class="status-form">
+                    @csrf
+                    <input type="hidden" name="status" value="SIAP_DIAMBIL_DIKIRIM">
+                    <button type="submit" class="status-btn ship {{ $order->status === 'SIAP_DIAMBIL_DIKIRIM' ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
+                        <span class="status-btn-title">Siap Dikirim/Diambil</span>
+                        <span class="status-btn-sub">Tandai pesanan siap diserahkan</span>
+                    </button>
+                </form>
+
+                <form action="{{ $statusRoute }}" method="POST" class="status-form">
+                    @csrf
+                    <input type="hidden" name="status" value="SELESAI">
+                    <button type="submit" class="status-btn done {{ $order->status === 'SELESAI' ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
+                        <span class="status-btn-title">Selesai</span>
+                        <span class="status-btn-sub">Tutup proses pesanan</span>
+                    </button>
+                </form>
             </div>
         </div>
-    @endif
+    </div>
 
     <div class="card mt-4">
         <div class="card-body">
@@ -270,16 +265,12 @@
 <style>
 .order-detail-page h2 {
     margin: 0;
-    color: #1f2937;
+    color: #2c3e50;
+    font-size: 28px;
 }
 
 .page-head {
     margin-bottom: 24px;
-}
-
-.page-head p {
-    margin: 6px 0 0;
-    color: #6b7280;
 }
 
 .grid.two-columns {
@@ -288,35 +279,21 @@
     gap: 20px;
 }
 
-.hero-card {
-    background: linear-gradient(135deg, #fff7ed 0%, #fefce8 100%);
-    border: 1px solid #fde7c7;
-}
-
 .card {
     background: #fff;
     border: 1px solid #e5e7eb;
-    border-radius: 18px;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .card-body {
-    padding: 22px;
-}
-
-.eyebrow {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #9a3412;
-    font-weight: 700;
+    padding: 20px;
 }
 
 .order-number {
-    margin-top: 8px;
-    font-size: 28px;
-    font-weight: 800;
-    color: #111827;
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c3e50;
 }
 
 .badge-row {
@@ -335,6 +312,7 @@
     font-weight: 800;
 }
 
+.order-status.status-pesanan-diterima { background: #fff7ed; color: #c2410c; }
 .order-status.status-menunggu-pembayaran { background: #fef3c7; color: #92400e; }
 .order-status.status-sedang-diproses { background: #dbeafe; color: #1d4ed8; }
 .order-status.status-siap-diambil-dikirim { background: #d1fae5; color: #047857; }
@@ -355,10 +333,11 @@
 }
 
 .mini-item {
-    background: rgba(255, 255, 255, 0.84);
+    background: rgba(255, 255, 255, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.92);
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
 }
 
 .mini-item strong,
@@ -430,13 +409,61 @@
 
 .action-buttons {
     display: grid;
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 16px;
-    align-items: start;
+    align-items: stretch;
+}
+
+.verify-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 100%;
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+}
+
+.verify-card-approve {
+    justify-content: space-between;
+}
+
+.verify-card-reject {
+    justify-content: flex-start;
+}
+
+.verify-card-head {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.verify-card-head p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.verify-card-label {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 800;
 }
 
 .form-group {
     margin-bottom: 12px;
+}
+
+.form-group-tight {
+    margin-bottom: 0;
 }
 
 .form-group label {
@@ -454,10 +481,19 @@
     font-family: inherit;
 }
 
+.reject-textarea {
+    min-height: 104px;
+    resize: vertical;
+}
+
 .status-actions {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
+}
+
+.status-actions-four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .status-form {
@@ -481,6 +517,7 @@
     box-shadow: 0 16px 30px rgba(15, 23, 42, 0.16);
 }
 
+.status-btn.received { background: linear-gradient(135deg, #ea580c, #c2410c); }
 .status-btn.pack { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
 .status-btn.ship { background: linear-gradient(135deg, #0f766e, #0d9488); }
 .status-btn.done { background: linear-gradient(135deg, #15803d, #16a34a); }
@@ -520,6 +557,11 @@
     display: inline-block;
 }
 
+.btn-block {
+    width: 100%;
+    text-align: center;
+}
+
 .btn-success {
     background: linear-gradient(135deg, #16a34a, #15803d);
     color: white;
@@ -528,30 +570,6 @@
 .btn-danger {
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
-}
-
-.alert {
-    padding: 14px 16px;
-    border-radius: 12px;
-    margin-top: 16px;
-}
-
-.alert-success {
-    background: #dcfce7;
-    border: 1px solid #bbf7d0;
-    color: #166534;
-}
-
-.alert-danger {
-    background: #fee2e2;
-    border: 1px solid #fecaca;
-    color: #991b1b;
-}
-
-.alert-cash {
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    color: #92400e;
 }
 
 .table {

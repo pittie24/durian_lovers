@@ -11,9 +11,10 @@ use Illuminate\Support\Facades\Log;
 class HistoryController extends Controller
 {
     private const STATUS_MAP = [
+        'PESANAN_DITERIMA' => ['Pesanan Diterima', 'received'],
         'MENUNGGU_PEMBAYARAN' => ['Menunggu Pembayaran', 'default'],
         'SEDANG_DIPROSES' => ['Dikemas', 'process'],
-        'SIAP_DIAMBIL_DIKIRIM' => ['Dikirim', 'shipped'],
+        'SIAP_DIAMBIL_DIKIRIM' => ['Siap Dikirim/Diambil', 'shipped'],
         'SELESAI' => ['Selesai', 'done'],
         'DIBATALKAN' => ['Dibatalkan', 'cancel'],
     ];
@@ -50,9 +51,9 @@ class HistoryController extends Controller
                                 'payment_method' => $transactionData['payment_type'] ?? $order->payment->payment_method,
                             ]);
                             
-                            // Selaraskan dengan alur admin: pembayaran sukses masuk ke tahap proses.
+                            // Selaraskan dengan alur admin: pembayaran sukses masuk ke tahap diterima.
                             if (in_array($transactionStatus, ['settlement', 'capture'])) {
-                                $order->update(['status' => 'SEDANG_DIPROSES']);
+                                $order->update(['status' => 'PESANAN_DITERIMA']);
                                 
                                 // Generate invoice if not exists
                                 if (!$order->invoice) {

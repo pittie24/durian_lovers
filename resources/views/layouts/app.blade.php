@@ -35,6 +35,7 @@
                         <button type="submit" class="link-button">Logout</button>
                     </form>
                 @else
+                    <a href="/" class="{{ request()->getPathInfo() === '/' ? 'active' : '' }}">Beranda</a>
                     <a href="/login" class="{{ request()->is('login') ? 'active' : '' }}">Login</a>
                     <a href="/register" class="{{ request()->is('register') ? 'active' : '' }}">Register</a>
                 @endauth
@@ -44,6 +45,8 @@
 
     <main class="container main-content">
         @auth
+            @hasSection('hideBackButton')
+            @else
             <div class="page-backbar">
                 <button
                     type="button"
@@ -53,6 +56,7 @@
                     ← Kembali
                 </button>
             </div>
+            @endif
         @endauth
         @unless(request()->is('login'))
             @include('partials.flash')

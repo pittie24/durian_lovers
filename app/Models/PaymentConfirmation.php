@@ -81,10 +81,12 @@ class PaymentConfirmation extends Model
             'verified_at' => now(),
         ]);
 
-        // Setelah pembayaran valid, pesanan masuk ke tahap proses admin.
-        $this->order->update([
-            'status' => 'SEDANG_DIPROSES',
-        ]);
+        // Setelah pembayaran valid, status tetap di tahap diterima.
+        if ($this->order->status !== 'SELESAI') {
+            $this->order->update([
+                'status' => 'PESANAN_DITERIMA',
+            ]);
+        }
 
         // Update or create payment record
         $payment = $this->order->payment;

@@ -41,9 +41,9 @@ class UpdatePaymentStatus extends Command
             'payment_method' => $payment->payment_method ?? 'Transfer Bank',
         ]);
         
-        // Opsi B: Langsung SELESAI setelah bayar
+        // Selaraskan dengan alur admin: pembayaran sukses masuk ke tahap diterima.
         $order->update([
-            'status' => 'SELESAI',
+            'status' => 'PESANAN_DITERIMA',
         ]);
         
         $this->info("Payment status updated to: {$status}");

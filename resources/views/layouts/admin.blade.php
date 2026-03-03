@@ -37,6 +37,8 @@
     </header>
 
     <main class="container main-content">
+        @hasSection('hideBackButton')
+        @else
         <div class="page-backbar">
             <button
                 type="button"
@@ -46,6 +48,7 @@
                 ← Kembali
             </button>
         </div>
+        @endif
         @include('partials.flash')
         @yield('content')
     </main>

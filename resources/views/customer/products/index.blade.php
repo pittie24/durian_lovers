@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('hideBackButton', '1')
+
 @section('content')
 
 <section class="section-heading split">
@@ -43,17 +45,20 @@
     <h2 class="section-title">Semua Produk</h2>
   </div>
 
-  <div class="tabs">
-    @php
-      $tabs = ['Semua Produk', 'Pancake Durian', 'Durian Segar', 'Ice Cream'];
-    @endphp
+  {{-- Sticky Tabs Wrapper --}}
+  <div class="category-bar">
+    <div class="tabs">
+      @php
+        $tabs = ['Semua Produk', 'Pancake Durian', 'Durian Segar', 'Ice Cream'];
+      @endphp
 
-    @foreach ($tabs as $tab)
-      <a href="/produk?category={{ urlencode($tab) }}"
-         class="tab {{ $category === $tab ? 'active' : '' }}">
-        {{ $tab }}
-      </a>
-    @endforeach
+      @foreach ($tabs as $tab)
+        <a href="/produk?category={{ urlencode($tab) }}"
+           class="tab {{ $category === $tab ? 'active' : '' }}">
+          {{ $tab }}
+        </a>
+      @endforeach
+    </div>
   </div>
 </section>
 
@@ -88,5 +93,61 @@
     <div class="empty-box">Produk tidak ditemukan untuk kategori ini.</div>
   @endforelse
 </div>
+
+{{-- CSS khusus halaman ini (boleh dipindah ke app.css kalau mau) --}}
+<style>
+  /* Sticky kategori/tabs */
+  .category-bar{
+    position: sticky;
+    top: 70px; /* sesuaikan jika navbar kamu lebih tinggi/rendah */
+    z-index: 30;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(10px);
+    padding: 8px 0;
+    border-radius: 14px;
+  }
+
+  /* efek klik tab supaya terasa interaktif */
+  .category-bar .tab{
+    transition: transform .12s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .category-bar .tab:active{
+    transform: scale(.97);
+  }
+
+  /* Reveal on scroll (produk muncul saat scroll) */
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .reveal, .reveal.is-visible { transition: none; transform: none; opacity: 1; }
+  }
+</style>
+
+{{-- JS untuk reveal on scroll --}}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const cards = document.querySelectorAll('.product-card');
+    cards.forEach(el => el.classList.add('reveal'));
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('is-visible');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    cards.forEach(el => io.observe(el));
+  });
+</script>
 
 @endsection

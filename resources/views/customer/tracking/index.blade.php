@@ -11,6 +11,14 @@
             3 => 'Siap Diambil/Dikirim',
             4 => 'Selesai',
         ];
+        $statusLabels = [
+            'PESANAN_DITERIMA' => 'Pesanan Diterima',
+            'MENUNGGU_PEMBAYARAN' => 'Menunggu Pembayaran',
+            'SEDANG_DIPROSES' => 'Pesanan Dikemas',
+            'SIAP_DIAMBIL_DIKIRIM' => 'Siap Dikirim/Siap Diambil',
+            'SELESAI' => 'Selesai',
+            'DIBATALKAN' => 'Dibatalkan',
+        ];
     @endphp
 
     @forelse($orders as $order)
@@ -21,7 +29,7 @@
                     <div class="tracking-date">{{ $order->created_at->format('d M Y, H:i') }}</div>
                 </div>
                 <div class="tracking-status status-{{ strtolower(str_replace('_', '-', $order->status)) }}">
-                    {{ str_replace('_', ' ', $order->status) }}
+                    {{ $statusLabels[$order->status] ?? str_replace('_', ' ', $order->status) }}
                 </div>
             </div>
 
@@ -55,48 +63,28 @@
                         <strong>Rp {{ number_format($order->total, 0, ',', '.') }}</strong>
                     </div>
                 </div>
-
-                <div class="summary-actions">
-                    @if(!$order->paymentConfirmation)
-                        <a href="{{ route('pembayaran.confirmation.show', $order->id) }}" class="btn btn-outline">
-                            Upload Bukti Pembayaran
-                        </a>
-                    @endif
-                </div>
             </div>
 
-            @if($order->paymentConfirmation)
-                <div class="payment-proof-section">
-                    <h4>Bukti Pembayaran</h4>
+            <div class="payment-proof-section">
+                <h4>Status Pembayaran</h4>
 
-                    @if($order->paymentConfirmation->isApproved())
-                        <div class="status-badge success">Diverifikasi</div>
-                    @elseif($order->paymentConfirmation->isPending())
-                        <div class="status-badge warning">Menunggu Verifikasi</div>
-                    @elseif($order->paymentConfirmation->isRejected())
-                        <div class="status-badge danger">Ditolak: {{ $order->paymentConfirmation->notes }}</div>
-                    @endif
+                @if($order->paymentConfirmation?->isApproved())
+                    <div class="status-badge success">Diverifikasi</div>
+                @elseif($order->paymentConfirmation?->isPending())
+                    <div class="status-badge warning">Menunggu Verifikasi</div>
+                @elseif($order->paymentConfirmation?->isRejected())
+                    <div class="status-badge danger">Ditolak: {{ $order->paymentConfirmation->notes }}</div>
+                @else
+                    <div class="status-badge warning">Menunggu Konfirmasi</div>
+                @endif
 
-                    <div class="proof-detail">
-                        <div class="detail-row">
-                            <span>Metode</span>
-                            <span>{{ $order->paymentConfirmation->bank_name }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span>Nama Pengirim</span>
-                            <span>{{ $order->paymentConfirmation->account_name }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span>Nominal</span>
-                            <span>Rp {{ number_format($order->paymentConfirmation->transfer_amount, 0, ',', '.') }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span>Tanggal Upload</span>
-                            <span>{{ $order->paymentConfirmation->created_at->format('d M Y, H:i') }}</span>
-                        </div>
+                <div class="proof-detail">
+                    <div class="detail-row">
+                        <span>Informasi</span>
+                        <span>Bukti transfer hanya dapat dilihat admin pada halaman pesanan.</span>
                     </div>
                 </div>
-            @endif
+            </div>
 
             <div class="ordered-items">
                 <h4>Produk yang dipesan</h4>
@@ -122,14 +110,15 @@
 
 <style>
 .tracking-page { max-width: 960px; margin: 0 auto; }
-.tracking-page h2 { font-size: 26px; font-weight: 700; color: #2c3e50; margin-bottom: 24px; }
+.tracking-page h2 { font-size: 28px; font-weight: 700; color: #2c3e50; margin-bottom: 20px; }
 
 .tracking-detail-card {
     background: white;
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 24px;
     margin-bottom: 20px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
 }
 
 .tracking-detail-header {
@@ -143,8 +132,9 @@
 .tracking-date { color: #666; font-size: 13px; margin-top: 4px; }
 
 .tracking-status { padding: 8px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.tracking-status.status-pesanan-diterima { background: #fff7ed; color: #c2410c; }
 .tracking-status.status-menunggu-pembayaran { background: #fff3cd; color: #856404; }
-.tracking-status.status-sedang-diproses, .tracking-status.status-pesanan-diterima { background: #d1ecf1; color: #0c5460; }
+.tracking-status.status-sedang-diproses { background: #d1ecf1; color: #0c5460; }
 .tracking-status.status-siap-diambil-dikirim { background: #d4edda; color: #155724; }
 .tracking-status.status-selesai { background: #27ae60; color: white; }
 .tracking-status.status-dibatalkan { background: #dc3545; color: white; }
@@ -314,4 +304,20 @@
         grid-template-columns: 1fr;
     }
 }
+.tracking-detail-header strong{
+    font-size: 18px;
+    font-weight: 800;
+    color: #1f2937;
+}
+
+.tracking-detail-card{
+    transition: .25s ease;
+}
+
+.tracking-detail-card:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px rgba(0,0,0,.12);
+}
+
 </style>
+

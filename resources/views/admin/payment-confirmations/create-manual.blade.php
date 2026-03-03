@@ -46,21 +46,13 @@
                     <h4>Pengiriman & Pembayaran</h4>
 
                     <div class="form-group">
-                        <label for="shipping_method">Metode Pengiriman</label>
-                        <select id="shipping_method" name="shipping_method" class="form-control">
-                            <option value="pickup" {{ old('shipping_method', 'pickup') === 'pickup' ? 'selected' : '' }}>Ambil di Toko</option>
-                            <option value="delivery" {{ old('shipping_method') === 'delivery' ? 'selected' : '' }}>Dikirim</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" id="shipping-address-group">
-                        <label for="shipping_address">Alamat Pengiriman</label>
-                        <textarea id="shipping_address" name="shipping_address" class="form-control" rows="4" placeholder="Isi jika pesanan perlu dikirim">{{ old('shipping_address') }}</textarea>
+                        <label>Metode Pengiriman</label>
+                        <div class="form-static">Ambil di Toko</div>
                     </div>
 
                     <div class="cash-note">
                         <span class="cash-pill">Cash</span>
-                        <p>Pembayaran dicatat langsung lunas. Bukti transfer tidak diperlukan.</p>
+                        <p>Pembayaran dicatat langsung lunas dan pesanan cash hanya untuk ambil di toko.</p>
                     </div>
                 </div>
             </div>
@@ -119,23 +111,6 @@
         </div>
     </form>
 </div>
-
-<script>
-    (function () {
-        const shippingSelect = document.getElementById('shipping_method');
-        const addressGroup = document.getElementById('shipping-address-group');
-        const addressInput = document.getElementById('shipping_address');
-
-        function syncShippingField() {
-            const isDelivery = shippingSelect.value === 'delivery';
-            addressInput.required = isDelivery;
-            addressGroup.style.display = isDelivery ? 'block' : 'none';
-        }
-
-        shippingSelect.addEventListener('change', syncShippingField);
-        syncShippingField();
-    })();
-</script>
 
 <style>
 .manual-order-page h2 {
@@ -196,6 +171,16 @@
     border: 1px solid #d1d5db;
     border-radius: 12px;
     font: inherit;
+}
+
+.form-static {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    background: #f9fafb;
+    color: #111827;
+    font-weight: 600;
 }
 
 .qty-input {

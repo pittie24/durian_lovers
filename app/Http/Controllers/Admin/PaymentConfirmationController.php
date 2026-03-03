@@ -70,16 +70,10 @@ class PaymentConfirmationController extends Controller
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
-            'shipping_method' => ['required', 'in:delivery,pickup'],
-            'shipping_address' => ['nullable', 'string'],
             'quantities' => ['required', 'array'],
         ]);
-
-        if ($data['shipping_method'] === 'delivery') {
-            $request->validate([
-                'shipping_address' => ['required', 'string'],
-            ]);
-        }
+        $data['shipping_method'] = 'pickup';
+        $data['shipping_address'] = 'Ambil di Toko';
 
         $selectedProducts = [];
         $subtotal = 0;
@@ -119,7 +113,7 @@ class PaymentConfirmationController extends Controller
                 ->withInput();
         }
 
-        $shippingCost = $data['shipping_method'] === 'delivery' ? 10000 : 0;
+        $shippingCost = 0;
         $placeholderUser = $this->resolveManualCustomerUser();
 
         $order = DB::transaction(function () use ($data, $selectedProducts, $subtotal, $shippingCost, $placeholderUser) {
@@ -128,7 +122,7 @@ class PaymentConfirmationController extends Controller
                 'customer_name' => $data['customer_name'],
                 'customer_email' => $data['customer_email'] ?: null,
                 'customer_phone' => $data['customer_phone'] ?: null,
-                'status' => 'SEDANG_DIPROSES',
+                'status' => 'PESANAN_DITERIMA',
                 'shipping_method' => $data['shipping_method'],
                 'payment_method' => 'Cash',
                 'phone' => $data['customer_phone'] ?: '-',
@@ -170,7 +164,7 @@ class PaymentConfirmationController extends Controller
 
         return redirect()
             ->route('admin.payment-confirmations.order.show', $order)
-            ->with('success', 'Pesanan cash berhasil dibuat dan langsung tercatat sebagai pembayaran lunas.');
+            ->with('success', 'Pesanan cash berhasil dibuat.');
     }
 
     /**
@@ -179,7 +173,7 @@ class PaymentConfirmationController extends Controller
     public function updateOrderStatus(Request $request, PaymentConfirmation $confirmation)
     {
         $data = $request->validate([
-            'status' => ['required', 'in:SEDANG_DIPROSES,SIAP_DIAMBIL_DIKIRIM,SELESAI'],
+            'status' => ['required', 'in:PESANAN_DITERIMA,SEDANG_DIPROSES,SIAP_DIAMBIL_DIKIRIM,SELESAI'],
         ]);
 
         $order = $confirmation->order;
@@ -189,14 +183,20 @@ class PaymentConfirmationController extends Controller
                 ->withErrors(['status' => 'Pesanan sudah selesai dan tidak bisa diubah lagi.']);
         }
 
-        if (!$confirmation->isApproved()) {
+        if ($data['status'] !== 'PESANAN_DITERIMA' && !$confirmation->isApproved()) {
             return redirect()->route('admin.payment-confirmations.show', $confirmation)
                 ->withErrors(['status' => 'Setujui pembayaran terlebih dahulu sebelum mengubah status pesanan.']);
         }
 
+        if (!$this->isSequentialStatusUpdateAllowed($order->status, $data['status'])) {
+            return redirect()->route('admin.payment-confirmations.show', $confirmation)
+                ->withErrors(['status' => 'Status pesanan harus diubah berurutan: Diterima -> Dikemas -> Siap Dikirim/Diambil -> Selesai.']);
+        }
+
         $labels = [
+            'PESANAN_DITERIMA' => 'Pesanan diterima.',
             'SEDANG_DIPROSES' => 'Pesanan dikemas.',
-            'SIAP_DIAMBIL_DIKIRIM' => 'Pesanan siap dikirim.',
+            'SIAP_DIAMBIL_DIKIRIM' => 'Pesanan siap dikirim/diambil.',
             'SELESAI' => 'Pesanan selesai.',
         ];
 
@@ -211,7 +211,7 @@ class PaymentConfirmationController extends Controller
     public function updateOrderStatusForOrder(Request $request, Order $order)
     {
         $data = $request->validate([
-            'status' => ['required', 'in:SEDANG_DIPROSES,SIAP_DIAMBIL_DIKIRIM,SELESAI'],
+            'status' => ['required', 'in:PESANAN_DITERIMA,SEDANG_DIPROSES,SIAP_DIAMBIL_DIKIRIM,SELESAI'],
         ]);
 
         if ($order->status === 'SELESAI') {
@@ -220,14 +220,22 @@ class PaymentConfirmationController extends Controller
         }
 
         $payment = $order->payment;
-        if (!$payment || $payment->status !== 'PAID') {
+        $isPaid = $payment && in_array(strtoupper((string) $payment->status), ['PAID', 'SETTLED', 'SETTLEMENT', 'CAPTURE'], true);
+
+        if ($data['status'] !== 'PESANAN_DITERIMA' && !$isPaid) {
             return redirect()->route('admin.payment-confirmations.order.show', $order)
                 ->withErrors(['status' => 'Pesanan belum lunas dan belum bisa diproses.']);
         }
 
+        if (!$this->isSequentialStatusUpdateAllowed($order->status, $data['status'])) {
+            return redirect()->route('admin.payment-confirmations.order.show', $order)
+                ->withErrors(['status' => 'Status pesanan harus diubah berurutan: Diterima -> Dikemas -> Siap Dikirim/Diambil -> Selesai.']);
+        }
+
         $labels = [
+            'PESANAN_DITERIMA' => 'Pesanan diterima.',
             'SEDANG_DIPROSES' => 'Pesanan dikemas.',
-            'SIAP_DIAMBIL_DIKIRIM' => 'Pesanan siap dikirim.',
+            'SIAP_DIAMBIL_DIKIRIM' => 'Pesanan siap dikirim/diambil.',
             'SELESAI' => 'Pesanan selesai.',
         ];
 
@@ -314,5 +322,32 @@ class PaymentConfirmationController extends Controller
                 'password' => Hash::make(bin2hex(random_bytes(16))),
             ]
         );
+    }
+
+    private function isSequentialStatusUpdateAllowed(string $currentStatus, string $targetStatus): bool
+    {
+        $sequence = [
+            'PESANAN_DITERIMA',
+            'SEDANG_DIPROSES',
+            'SIAP_DIAMBIL_DIKIRIM',
+            'SELESAI',
+        ];
+
+        $normalizedCurrent = $currentStatus === 'MENUNGGU_PEMBAYARAN'
+            ? 'PESANAN_DITERIMA'
+            : $currentStatus;
+
+        $currentIndex = array_search($normalizedCurrent, $sequence, true);
+        $targetIndex = array_search($targetStatus, $sequence, true);
+
+        if ($currentIndex === false || $targetIndex === false) {
+            return false;
+        }
+
+        if ($currentIndex === $targetIndex) {
+            return true;
+        }
+
+        return $targetIndex === ($currentIndex + 1);
     }
 }

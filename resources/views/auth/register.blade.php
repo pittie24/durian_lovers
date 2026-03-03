@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="auth-card">
-    <h2>Registrasi Pelanggan</h2>
+    <h2>Register Pelanggan</h2>
     <form method="POST" action="/register">
         @csrf
         <label>Nama Lengkap</label>
@@ -23,7 +23,7 @@
         <label>Konfirmasi Password</label>
         <input type="password" name="password_confirmation" required>
 
-        <button type="submit" class="btn primary full">Daftar</button>
+        <button type="submit" class="btn primary full">Register</button>
     </form>
     <div class="auth-links">
         <a href="/login">Sudah punya akun? Login</a>

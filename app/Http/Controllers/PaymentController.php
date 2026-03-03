@@ -57,11 +57,11 @@ class PaymentController extends Controller
         // Map Midtrans status to our payment status
         $paymentStatus = strtoupper($transactionStatus ?? 'PENDING');
         
-        // Map to order status - OTOMATIS SELESAI SETELAH BAYAR (Opsi B)
+        // Map status pembayaran ke alur status pesanan admin.
         $orderStatus = $order->status;
         if (in_array($transactionStatus, ['settlement', 'capture'])) {
             // Pembayaran sukses → LANGSUNG SELESAI
-            $orderStatus = 'SELESAI';
+            $orderStatus = 'PESANAN_DITERIMA';
         } elseif ($transactionStatus === 'pending') {
             $orderStatus = 'MENUNGGU_PEMBAYARAN';
         } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire'])) {
@@ -90,7 +90,7 @@ class PaymentController extends Controller
         ]);
 
         // Generate invoice if payment is successful
-        if (in_array($paymentStatus, ['PAID', 'SETTLED']) && !$order->invoice) {
+        if (in_array($paymentStatus, ['PAID', 'SETTLED', 'SETTLEMENT', 'CAPTURE'], true) && !$order->invoice) {
             try {
                 InvoiceGeneratorService::generate($order, $payment);
                 Log::info('Invoice generated for order', ['order_id' => $order->id]);
@@ -272,10 +272,10 @@ class PaymentController extends Controller
         $orderStatus = $order->status;
         $paymentStatus = strtoupper($transactionStatus ?? 'PENDING');
 
-        // Mapping status pembayaran ke status order - OTOMATIS SELESAI (Opsi B)
+        // Mapping status pembayaran ke alur status pesanan admin.
         if (in_array($transactionStatus, ['settlement', 'capture'])) {
             // Pembayaran sukses → LANGSUNG SELESAI
-            $orderStatus = 'SELESAI';
+            $orderStatus = 'PESANAN_DITERIMA';
         } elseif ($transactionStatus === 'pending') {
             $orderStatus = 'MENUNGGU_PEMBAYARAN';
         } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire'])) {
@@ -301,7 +301,7 @@ class PaymentController extends Controller
             ]);
             
             // Generate invoice otomatis jika pembayaran berhasil (PAID/SETTLED)
-            if (in_array($paymentStatus, ['PAID', 'SETTLED']) && !$order->invoice) {
+            if (in_array($paymentStatus, ['PAID', 'SETTLED', 'SETTLEMENT', 'CAPTURE'], true) && !$order->invoice) {
                 try {
                     InvoiceGeneratorService::generate($order, $order->payment);
                     Log::info('Invoice generated for order', ['order_id' => $order->id]);

@@ -76,9 +76,9 @@ class TrackingController extends Controller
                             'payment_method' => $transactionData['payment_type'] ?? $order->payment->payment_method,
                         ]);
                         
-                        // Update order status if payment successful - OTOMATIS SELESAI (Opsi B)
+                        // Pembayaran sukses masuk ke tahap pesanan diterima.
                         if (in_array($transactionStatus, ['settlement', 'capture'])) {
-                            $order->update(['status' => 'SELESAI']);
+                            $order->update(['status' => 'PESANAN_DITERIMA']);
                             
                             // Generate invoice if not exists
                             if (!$order->invoice) {
@@ -126,6 +126,7 @@ class TrackingController extends Controller
 
         $steps = [
             'PESANAN_DITERIMA' => 1,
+            'MENUNGGU_PEMBAYARAN' => 1,
             'SEDANG_DIPROSES' => 2,
             'SIAP_DIAMBIL_DIKIRIM' => 3,
             'SELESAI' => 4,

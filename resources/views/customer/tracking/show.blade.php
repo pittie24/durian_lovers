@@ -3,6 +3,17 @@
 @section('content')
 <h2>Status Pesanan</h2>
 
+@php
+    $statusLabels = [
+        'PESANAN_DITERIMA' => 'Pesanan Diterima',
+        'MENUNGGU_PEMBAYARAN' => 'Menunggu Pembayaran',
+        'SEDANG_DIPROSES' => 'Pesanan Dikemas',
+        'SIAP_DIAMBIL_DIKIRIM' => 'Siap Dikirim/Siap Diambil',
+        'SELESAI' => 'Selesai',
+        'DIBATALKAN' => 'Dibatalkan',
+    ];
+@endphp
+
 @if($order->status !== 'DIBATALKAN')
     <div class="timeline">
         @php
@@ -26,7 +37,7 @@
 
 <div class="card">
     <div class="card-body">
-        <h4>Status pesanan: {{ str_replace('_', ' ', $order->status) }}</h4>
+        <h4>Status pesanan: {{ $statusLabels[$order->status] ?? str_replace('_', ' ', $order->status) }}</h4>
         <div class="summary-row">
             <span>Metode pengiriman</span>
             <span>{{ $order->shipping_method }}</span>
@@ -40,51 +51,26 @@
             <span>Rp {{ number_format($order->total, 0, ',', '.') }}</span>
         </div>
 
-        @if($order->paymentConfirmation)
-            <div class="payment-proof-section mt-4">
-                <h5>Bukti Pembayaran</h5>
+        <div class="payment-proof-section mt-4">
+            <h5>Status Pembayaran</h5>
 
-                @if($order->paymentConfirmation->isApproved())
-                    <div class="status-badge success">Diverifikasi</div>
-                @elseif($order->paymentConfirmation->isPending())
-                    <div class="status-badge warning">Menunggu Verifikasi</div>
-                @elseif($order->paymentConfirmation->isRejected())
-                    <div class="status-badge danger">Ditolak: {{ $order->paymentConfirmation->notes }}</div>
-                @endif
+            @if($order->paymentConfirmation?->isApproved())
+                <div class="status-badge success">Diverifikasi</div>
+            @elseif($order->paymentConfirmation?->isPending())
+                <div class="status-badge warning">Menunggu Verifikasi</div>
+            @elseif($order->paymentConfirmation?->isRejected())
+                <div class="status-badge danger">Ditolak: {{ $order->paymentConfirmation->notes }}</div>
+            @else
+                <div class="status-badge warning">Menunggu Konfirmasi</div>
+            @endif
 
-                <div class="proof-detail">
-                    <div class="detail-row">
-                        <span class="label">Metode:</span>
-                        <span class="value">{{ $order->paymentConfirmation->bank_name }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Nama Pengirim:</span>
-                        <span class="value">{{ $order->paymentConfirmation->account_name }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Nominal:</span>
-                        <span class="value">Rp {{ number_format($order->paymentConfirmation->transfer_amount, 0, ',', '.') }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Tanggal Upload:</span>
-                        <span class="value">{{ $order->paymentConfirmation->created_at->format('d M Y, H:i') }}</span>
-                    </div>
+            <div class="proof-detail">
+                <div class="detail-row">
+                    <span class="label">Informasi:</span>
+                    <span class="value">Bukti transfer hanya ditampilkan di halaman pesanan admin.</span>
                 </div>
-
-                @if($order->paymentConfirmation->proof_image)
-                    <div class="proof-image-container">
-                        <img src="{{ Storage::url($order->paymentConfirmation->proof_image) }}" alt="Bukti Transfer" class="proof-image">
-                    </div>
-                @endif
-
             </div>
-        @else
-            <div class="mt-4">
-                <a href="{{ route('pembayaran.confirmation.show', $order->id) }}" class="btn btn-primary">
-                    Upload Bukti Pembayaran
-                </a>
-            </div>
-        @endif
+        </div>
     </div>
 </div>
 
@@ -106,6 +92,19 @@
 @endsection
 
 <style>
+h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.card {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
 .payment-proof-section {
     background: #f8f9fa;
     padding: 20px;
@@ -171,18 +170,6 @@
 .detail-row .value {
     color: #2c3e50;
     text-align: right;
-}
-
-.proof-image-container {
-    text-align: center;
-    margin-top: 16px;
-}
-
-.proof-image {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .btn {

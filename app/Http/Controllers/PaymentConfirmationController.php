@@ -76,7 +76,7 @@ class PaymentConfirmationController extends Controller
 
             // Update order status
             $order->update([
-                'status' => 'MENUNGGU_PEMBAYARAN',
+                'status' => 'PESANAN_DITERIMA',
             ]);
         }
 

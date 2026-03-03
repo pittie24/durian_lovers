@@ -9,19 +9,12 @@
         </a>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
     <div class="card">
         <div class="card-body">
             <table class="table">
                 <thead>
                     <tr>
                         <th>Order</th>
-                        <th>ID Konfirmasi</th>
                         <th>Pelanggan</th>
                         <th>Bank</th>
                         <th>Nominal</th>
@@ -37,10 +30,15 @@
                             $confirmation = $order->paymentConfirmation;
                             $payment = $order->payment;
                             $isCashOrder = strtoupper((string) ($payment?->payment_method ?? $order->payment_method)) === 'CASH';
-                            $orderStatusLabel = match($order->status) {
+                            $isPaidOrder = in_array(strtoupper((string) ($payment?->status ?? '')), ['PAID', 'SETTLED', 'SETTLEMENT', 'CAPTURE'], true);
+                            $displayOrderStatus = $order->status === 'MENUNGGU_PEMBAYARAN' && ($confirmation || $isPaidOrder)
+                                ? 'PESANAN_DITERIMA'
+                                : $order->status;
+                            $orderStatusLabel = match($displayOrderStatus) {
+                                'PESANAN_DITERIMA' => 'Pesanan Diterima',
                                 'MENUNGGU_PEMBAYARAN' => 'Menunggu Pembayaran',
                                 'SEDANG_DIPROSES' => 'Dikemas',
-                                'SIAP_DIAMBIL_DIKIRIM' => 'Dikirim',
+                                'SIAP_DIAMBIL_DIKIRIM' => 'Siap Dikirim/Diambil',
                                 'SELESAI' => 'Selesai',
                                 'DIBATALKAN' => 'Dibatalkan',
                                 default => str_replace('_', ' ', $order->status),
@@ -48,25 +46,26 @@
                         @endphp
                         <tr>
                             <td>{{ $order->order_number }}</td>
-                            <td>{{ $confirmation ? '#' . $confirmation->id : '-' }}</td>
                             <td>{{ $order->customer_display_name }}</td>
                             <td>{{ $isCashOrder ? 'Cash' : ($confirmation?->bank_name ?? ($order->payment_method ?? '-')) }}</td>
                             <td>Rp {{ number_format($confirmation?->transfer_amount ?? $order->total, 0, ',', '.') }}</td>
                             <td>
                                 @if($isCashOrder)
-                                    <span class="badge badge-cash">Cash</span>
-                                @elseif(!$confirmation)
-                                    <span class="badge badge-secondary">-</span>
-                                @elseif($confirmation->status === 'PENDING')
-                                    <span class="badge badge-secondary">-</span>
-                                @elseif($confirmation->status === 'APPROVED')
                                     <span class="badge badge-success">Diterima</span>
-                                @else
+                                @elseif($confirmation && $confirmation->status === 'APPROVED')
+                                    <span class="badge badge-success">Diterima</span>
+                                @elseif($confirmation && $confirmation->status === 'REJECTED')
                                     <span class="badge badge-danger">Ditolak</span>
+                                @elseif($isPaidOrder)
+                                    <span class="badge badge-success">Diterima</span>
+                                @elseif($confirmation && $confirmation->status === 'PENDING')
+                                    <span class="badge badge-secondary">-</span>
+                                @else
+                                    <span class="badge badge-secondary">-</span>
                                 @endif
                             </td>
                             <td>
-                                <span class="badge badge-order status-{{ strtolower(str_replace('_', '-', $order->status)) }}">
+                                <span class="badge badge-order status-{{ strtolower(str_replace('_', '-', $displayOrderStatus)) }}">
                                     {{ $orderStatusLabel }}
                                 </span>
                             </td>
@@ -76,18 +75,16 @@
                                     <a href="{{ route('admin.payment-confirmations.show', $confirmation) }}" class="btn btn-sm btn-primary">
                                         Detail
                                     </a>
-                                @elseif($isCashOrder)
+                                @else
                                     <a href="{{ route('admin.payment-confirmations.order.show', $order) }}" class="btn btn-sm btn-primary">
                                         Detail
                                     </a>
-                                @else
-                                    <span class="text-muted">Menunggu upload pelanggan</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center">Belum ada pesanan untuk ditampilkan.</td>
+                            <td colspan="8" class="text-center">Belum ada pesanan untuk ditampilkan.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -106,6 +103,8 @@
 .payment-confirmations-page h2 {
     margin: 0;
     color: #2c3e50;
+    font-size: 28px;
+    font-weight: 700;
 }
 
 .page-head {
@@ -114,6 +113,7 @@
     align-items: center;
     gap: 16px;
     margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
 .table {
@@ -130,7 +130,7 @@
 
 .table th {
     background: #f8f9fa;
-    font-weight: 600;
+    font-weight: 700;
     color: #2c3e50;
 }
 
@@ -173,6 +173,11 @@
 
 .badge-order {
     font-weight: 700;
+}
+
+.badge-order.status-pesanan-diterima {
+    background: #fff7ed;
+    color: #c2410c;
 }
 
 .badge-order.status-menunggu-pembayaran {
@@ -227,18 +232,7 @@
 .btn-cash {
     background: linear-gradient(135deg, #f59e0b, #d97706);
     color: white;
-}
-
-.alert {
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 16px;
-}
-
-.alert-success {
-    background: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
+    box-shadow: 0 14px 24px rgba(245,158,11,.18);
 }
 
 .text-muted {
