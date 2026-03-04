@@ -122,7 +122,7 @@ class PaymentConfirmationController extends Controller
                 'customer_name' => $data['customer_name'],
                 'customer_email' => $data['customer_email'] ?: null,
                 'customer_phone' => $data['customer_phone'] ?: null,
-                'status' => 'PESANAN_DITERIMA',
+                'status' => 'SELESAI',
                 'shipping_method' => $data['shipping_method'],
                 'payment_method' => 'Cash',
                 'phone' => $data['customer_phone'] ?: '-',
@@ -270,7 +270,7 @@ class PaymentConfirmationController extends Controller
      */
     public function approve(Request $request, PaymentConfirmation $confirmation)
     {
-        $admin = Auth::user();
+        $admin = Auth::guard('admin')->user();
 
         $confirmation->approve($admin->id);
 
@@ -287,7 +287,7 @@ class PaymentConfirmationController extends Controller
             'notes' => 'required|string|max:500',
         ]);
 
-        $admin = Auth::user();
+        $admin = Auth::guard('admin')->user();
 
         $confirmation->reject($admin->id, $request->notes);
 

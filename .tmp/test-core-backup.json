@@ -1,0 +1,83 @@
+{
+    "generated_at": "2026-03-04 12:45:10",
+    "tables": {
+        "admins": [
+            {
+                "id": "1",
+                "name": "Admin Backup",
+                "email": "backup-admin@example.com",
+                "password": "$2y$04$AnVCD7lSCj2Qm1r82W1EqeVek1p3jlhwAm3lThD94pRHze.b1yEH2",
+                "remember_token": null,
+                "created_at": "2026-03-04 12:45:10",
+                "updated_at": "2026-03-04 12:45:10"
+            }
+        ],
+        "users": [
+            {
+                "id": "1",
+                "name": "Sage Schumm",
+                "email": "backup-customer@example.com",
+                "email_verified_at": "2026-03-04 12:45:10",
+                "password": "$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC\/.og\/at2.uheWG\/igi",
+                "remember_token": "SQcyCzQ8FG",
+                "created_at": "2026-03-04 12:45:10",
+                "updated_at": "2026-03-04 12:45:10",
+                "phone": null,
+                "address": null
+            }
+        ],
+        "products": [
+            {
+                "id": "1",
+                "name": "Produk Backup",
+                "category": "Durian Segar",
+                "description": "Produk untuk uji backup",
+                "composition": "Durian",
+                "weight": "1 kg",
+                "price": "90000",
+                "stock": "10",
+                "sold_count": "1",
+                "image_url": "images\/products\/placeholder.jpg",
+                "rating_avg": "0",
+                "rating_count": "0",
+                "created_at": "2026-03-04 12:45:10",
+                "updated_at": "2026-03-04 12:45:10"
+            }
+        ],
+        "orders": [
+            {
+                "id": "1",
+                "user_id": "1",
+                "status": "SELESAI",
+                "shipping_method": "pickup",
+                "payment_method": "Cash",
+                "phone": "081234567890",
+                "shipping_address": "Ambil di Toko",
+                "subtotal": "90000",
+                "shipping_cost": "0",
+                "total": "90000",
+                "created_at": "2026-03-04 12:45:10",
+                "updated_at": "2026-03-04 12:45:10",
+                "customer_name": null,
+                "customer_email": null,
+                "customer_phone": null
+            }
+        ],
+        "order_items": [
+            {
+                "id": "1",
+                "order_id": "1",
+                "product_id": "1",
+                "quantity": "1",
+                "price": "90000",
+                "total": "90000",
+                "created_at": "2026-03-04 12:45:10",
+                "updated_at": "2026-03-04 12:45:10"
+            }
+        ],
+        "payments": [],
+        "payment_confirmations": [],
+        "invoices": [],
+        "ratings": []
+    }
+}

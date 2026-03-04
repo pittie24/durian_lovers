@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Services\ProductCatalogBootstrapService;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, ProductCatalogBootstrapService $catalogBootstrap)
     {
+        $catalogBootstrap->ensureSeeded();
+
         $category = $request->get('category', 'Semua Produk');
 
         // Produk terlaris (tetap 4)
@@ -31,8 +34,10 @@ class ProductController extends Controller
         ]);
     }
 
-    public function show(Product $product)
+    public function show(Product $product, ProductCatalogBootstrapService $catalogBootstrap)
     {
+        $catalogBootstrap->ensureSeeded();
+
         // Ratings & ulasan
         $ratings = $product->ratings()->latest()->get();
 

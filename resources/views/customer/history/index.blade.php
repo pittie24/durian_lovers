@@ -85,14 +85,18 @@
               <div class="order-item-meta">
                 <span>Jumlah: {{ $qty }}</span>
                 <span class="dot">•</span>
-                <span>Rp {{ number_format($price,0,',','.') }}</span>
+                @if((int) $price === 0)
+                  <span>Gratis <span class="free-item-mini">Free Item</span></span>
+                @else
+                  <span>Rp {{ number_format($price,0,',','.') }}</span>
+                @endif
               </div>
 
               {{-- ✅ Tombol rating per item (hanya kalau status selesai) --}}
               @if(Str::contains($statusRaw, 'selesai') && $orderItemId)
                 <div style="margin-top:10px;">
                   <a class="btn-rating" href="{{ route('rating.create', $orderItemId) }}">
-                    ⭐ Ubah Rating
+                    ⭐ Beri Rating
                   </a>
                 </div>
               @endif
@@ -150,4 +154,18 @@
     </div>
   @endforelse
 </div>
+<style>
+  .free-item-mini{
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 11px;
+    font-weight: 800;
+  }
+</style>
 @endsection
+

@@ -11,12 +11,14 @@ class EnsureAdmin
 {
     public function handle(Request $request, Closure $next)
     {
-        if (!Auth::check()) {
+        $guard = Auth::guard('admin');
+
+        if (!$guard->check()) {
             return redirect('/admin/login');
         }
 
-        if (!$this->isAdminEmail((string) Auth::user()->email)) {
-            Auth::logout();
+        if (!$this->isAdminEmail((string) $guard->user()->email)) {
+            $guard->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
@@ -30,6 +32,6 @@ class EnsureAdmin
     private function isAdminEmail(string $email): bool
     {
         return Admin::where('email', $email)->exists()
-            || strcasecmp($email, 'admin@durianlovers.com') === 0;
+            || in_array(strtolower($email), ['admin@durianlovers.com', 'admin@durianlovers.test'], true);
     }
 }

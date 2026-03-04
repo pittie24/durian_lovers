@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Services\ProductCatalogBootstrapService;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(ProductCatalogBootstrapService $catalogBootstrap)
     {
+        $catalogBootstrap->ensureSeeded();
+
         $products = Product::latest()->get();
 
         return view('admin.products.index', [

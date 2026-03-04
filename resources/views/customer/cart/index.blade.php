@@ -120,8 +120,6 @@
                     <div class="value">{{ $totalItems }}</div>
                 </div>
 
-                <div class="summary-divider"></div>
-
                 <div class="summary-row total">
                     <div class="label">Total Belanja</div>
                     <div class="value total-value">Rp {{ number_format($total, 0, ',', '.') }}</div>

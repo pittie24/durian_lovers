@@ -27,7 +27,7 @@
         </td>
 
         <td class="td-actions">
-          <a href="/admin/pelanggan/{{ $customer->id }}" class="link-detail">
+          <a href="{{ route('admin.pelanggan.show', $customer->detail_key) }}" class="link-detail">
             Detail
           </a>
         </td>

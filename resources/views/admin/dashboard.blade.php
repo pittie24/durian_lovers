@@ -88,7 +88,7 @@
           @forelse ($recentOrders as $order)
             <tr>
               <td class="mono">#{{ str_pad($order->id, 2, '0', STR_PAD_LEFT) }}-{{ str_pad($order->id, 3, '0', STR_PAD_LEFT) }}</td>
-              <td>{{ $order->user->name ?? '-' }}</td>
+              <td>{{ $order->customer_display_name }}</td>
               <td>{{ $order->created_at->format('d/m/Y') }}</td>
               <td class="money">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
               <td>

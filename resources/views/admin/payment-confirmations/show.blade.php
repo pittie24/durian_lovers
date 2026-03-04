@@ -24,6 +24,7 @@
     $statusRoute = $confirmation
         ? route('admin.payment-confirmations.order-status', $confirmation)
         : route('admin.payment-confirmations.order.status', $order);
+    $showStatusActions = !($isCashOrder && $order->status === 'SELESAI');
 @endphp
 
 <div class="order-detail-page">
@@ -186,7 +187,11 @@
                 <h4>Status Pesanan</h4>
                 <span class="section-note">
                     @if($isLocked)
-                        Status sudah terkunci.
+                        @if($showStatusActions)
+                            Status sudah terkunci.
+                        @else
+                            Pesanan cash manual otomatis diselesaikan saat disimpan.
+                        @endif
                     @elseif(!$canAdvanceStatus)
                         Pesanan ada di tahap diterima. Setujui pembayaran terlebih dahulu sebelum lanjut ke tahap berikutnya.
                     @else
@@ -195,43 +200,45 @@
                 </span>
             </div>
 
-            <div class="status-actions status-actions-four">
-                <form action="{{ $statusRoute }}" method="POST" class="status-form">
-                    @csrf
-                    <input type="hidden" name="status" value="PESANAN_DITERIMA">
-                    <button type="submit" class="status-btn received {{ $receivedActive ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
-                        <span class="status-btn-title">Pesanan Diterima</span>
-                        <span class="status-btn-sub">Tahap awal setelah pesanan masuk</span>
-                    </button>
-                </form>
+            @if($showStatusActions)
+                <div class="status-actions status-actions-four">
+                    <form action="{{ $statusRoute }}" method="POST" class="status-form">
+                        @csrf
+                        <input type="hidden" name="status" value="PESANAN_DITERIMA">
+                        <button type="submit" class="status-btn received {{ $receivedActive ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
+                            <span class="status-btn-title">Pesanan Diterima</span>
+                            <span class="status-btn-sub">Tahap awal setelah pesanan masuk</span>
+                        </button>
+                    </form>
 
-                <form action="{{ $statusRoute }}" method="POST" class="status-form">
-                    @csrf
-                    <input type="hidden" name="status" value="SEDANG_DIPROSES">
-                    <button type="submit" class="status-btn pack {{ $order->status === 'SEDANG_DIPROSES' ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
-                        <span class="status-btn-title">Pesanan Dikemas</span>
-                        <span class="status-btn-sub">Siapkan dan proses pesanan</span>
-                    </button>
-                </form>
+                    <form action="{{ $statusRoute }}" method="POST" class="status-form">
+                        @csrf
+                        <input type="hidden" name="status" value="SEDANG_DIPROSES">
+                        <button type="submit" class="status-btn pack {{ $order->status === 'SEDANG_DIPROSES' ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
+                            <span class="status-btn-title">Pesanan Dikemas</span>
+                            <span class="status-btn-sub">Siapkan dan proses pesanan</span>
+                        </button>
+                    </form>
 
-                <form action="{{ $statusRoute }}" method="POST" class="status-form">
-                    @csrf
-                    <input type="hidden" name="status" value="SIAP_DIAMBIL_DIKIRIM">
-                    <button type="submit" class="status-btn ship {{ $order->status === 'SIAP_DIAMBIL_DIKIRIM' ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
-                        <span class="status-btn-title">Siap Dikirim/Diambil</span>
-                        <span class="status-btn-sub">Tandai pesanan siap diserahkan</span>
-                    </button>
-                </form>
+                    <form action="{{ $statusRoute }}" method="POST" class="status-form">
+                        @csrf
+                        <input type="hidden" name="status" value="SIAP_DIAMBIL_DIKIRIM">
+                        <button type="submit" class="status-btn ship {{ $order->status === 'SIAP_DIAMBIL_DIKIRIM' ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
+                            <span class="status-btn-title">Siap Dikirim/Diambil</span>
+                            <span class="status-btn-sub">Tandai pesanan siap diserahkan</span>
+                        </button>
+                    </form>
 
-                <form action="{{ $statusRoute }}" method="POST" class="status-form">
-                    @csrf
-                    <input type="hidden" name="status" value="SELESAI">
-                    <button type="submit" class="status-btn done {{ $order->status === 'SELESAI' ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
-                        <span class="status-btn-title">Selesai</span>
-                        <span class="status-btn-sub">Tutup proses pesanan</span>
-                    </button>
-                </form>
-            </div>
+                    <form action="{{ $statusRoute }}" method="POST" class="status-form">
+                        @csrf
+                        <input type="hidden" name="status" value="SELESAI">
+                        <button type="submit" class="status-btn done {{ $order->status === 'SELESAI' ? 'is-active' : '' }}" {{ $isLocked ? 'disabled' : '' }}>
+                            <span class="status-btn-title">Selesai</span>
+                            <span class="status-btn-sub">Tutup proses pesanan</span>
+                        </button>
+                    </form>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -250,7 +257,12 @@
                 <tbody>
                     @foreach($order->items as $item)
                         <tr>
-                            <td>{{ $item->product->name }}</td>
+                            <td>
+                                {{ $item->product->name }}
+                                @if((int) $item->price === 0)
+                                    <span class="status-pill payment-status approved">Free Item</span>
+                                @endif
+                            </td>
                             <td>{{ $item->quantity }}</td>
                             <td>Rp {{ number_format($item->price, 0, ',', '.') }}</td>
                             <td>Rp {{ number_format($item->total, 0, ',', '.') }}</td>

@@ -3,6 +3,11 @@
 @section('content')
 <div class="auth-card">
     <h2>Login Pelanggan</h2>
+    @if (session('success'))
+        <div class="alert success auth-alert">
+            {{ session('success') }}
+        </div>
+    @endif
     @if ($errors->any())
         <div class="alert danger auth-alert">
             {{ $errors->first() }}
@@ -19,6 +24,7 @@
         <button type="submit" class="btn primary full">Login</button>
     </form>
     <div class="auth-links">
+        <a href="{{ route('password.request') }}">Lupa password?</a>
         <a href="/register">Belum punya akun? Register di sini</a>
         <a href="/">Kembali ke Beranda</a>
         <span class="muted">Admin? <a href="/admin/login">Login Admin</a></span>

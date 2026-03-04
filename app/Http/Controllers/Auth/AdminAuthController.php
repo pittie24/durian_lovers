@@ -6,9 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AdminAuthController extends Controller
 {
+    private const DEFAULT_ADMIN_EMAILS = [
+        'admin@durianlovers.com',
+        'admin@durianlovers.test',
+    ];
+
+    private const DEFAULT_ADMIN_PASSWORD = 'Admin@2026';
+
     public function showLogin()
     {
         return view('admin.auth.login');
@@ -21,14 +29,15 @@ class AdminAuthController extends Controller
             'password' => ['required'],
         ]);
 
+        $this->ensureDefaultAdminAccount();
+
         if (!$this->isAdminEmail($credentials['email'])) {
             return back()
                 ->withErrors(['email' => 'Hanya akun admin yang dapat mengakses halaman admin.'])
                 ->onlyInput('email');
         }
 
-        // Pakai guard default (web) karena admin kamu tersimpan di tabel users
-        if (Auth::attempt($credentials)) {
+        if (Auth::guard('admin')->attempt($credentials)) {
             $request->session()->regenerate();
             return redirect()->intended('/admin/dashboard');
         }
@@ -40,8 +49,7 @@ class AdminAuthController extends Controller
 
     public function logout(Request $request)
     {
-        // Logout dari guard default (web)
-        Auth::logout();
+        Auth::guard('admin')->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -52,6 +60,19 @@ class AdminAuthController extends Controller
     private function isAdminEmail(string $email): bool
     {
         return Admin::where('email', $email)->exists()
-            || strcasecmp($email, 'admin@durianlovers.com') === 0;
+            || in_array(strtolower($email), self::DEFAULT_ADMIN_EMAILS, true);
+    }
+
+    private function ensureDefaultAdminAccount(): void
+    {
+        if (Admin::exists()) {
+            return;
+        }
+
+        Admin::create([
+            'name' => 'Admin Durian Lovers',
+            'email' => self::DEFAULT_ADMIN_EMAILS[0],
+            'password' => Hash::make(self::DEFAULT_ADMIN_PASSWORD),
+        ]);
     }
 }

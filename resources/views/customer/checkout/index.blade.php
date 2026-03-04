@@ -4,6 +4,8 @@
 @php
   $shippingMethod = old('shipping_method', 'delivery');
   $cartItems = $cart ?? [];
+  $promotion = $promotion ?? [];
+  $freeItem = $promotion['free_item'] ?? null;
   $subtotal = $summary['subtotal'] ?? 0;
   $totalItems = collect($cartItems)->sum(function ($item) {
     return (int) ($item['quantity'] ?? 0);
@@ -29,6 +31,14 @@
   </div>
 
   <h1 class="checkout-title">Pembayaran</h1>
+  <div class="checkout-promo {{ !empty($promotion['is_awarded']) ? 'qualified' : '' }}">
+    @if(!empty($promotion['is_awarded']) && $freeItem)
+      Promo aktif: kamu mendapatkan free item <strong>{{ $freeItem['name'] }}</strong>.
+    @else
+      Belanja minimal Rp {{ number_format($promotion['threshold'] ?? 300000, 0, ',', '.') }} untuk gratis
+      <strong>{{ $promotion['free_item_name'] ?? 'Pancake Durian Mini' }}</strong>.
+    @endif
+  </div>
 
   <form method="POST" action="{{ url('/pembayaran') }}" class="checkout-grid" enctype="multipart/form-data">
     @csrf
@@ -182,6 +192,16 @@
               <div class="item-total">Rp {{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}</div>
             </div>
           @endforeach
+
+          @if($freeItem)
+            <div class="summary-item free-item-row">
+              <div class="item-info">
+                <div class="item-name">{{ $freeItem['name'] }}</div>
+                <div class="item-qty">1 x Rp 0 <span class="free-item-tag">Free Item</span></div>
+              </div>
+              <div class="item-total free">Gratis</div>
+            </div>
+          @endif
         </div>
 
         <div class="summary-divider"></div>
@@ -223,6 +243,23 @@
 <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
 
 <style>
+  .checkout-promo{
+    margin: 0 0 18px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #fff7e6;
+    border: 1px solid rgba(245,158,11,.18);
+    color: #8a5a00;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .checkout-promo.qualified{
+    background: #ecfdf3;
+    border-color: rgba(22,163,74,.18);
+    color: #166534;
+  }
+
   /* Page */
   .checkout-page{ max-width: 1100px; margin: 0 auto; }
   .checkout-title{ font-size: 28px; font-weight: 800; color: #1f2937; margin: 8px 0 18px; letter-spacing: -.02em; }
@@ -446,9 +483,26 @@
   }
   .summary-title{ font-size: 16px; font-weight: 900; color:#111827; margin-bottom: 14px; }
   .summary-item{ display:flex; justify-content:space-between; gap: 12px; margin-bottom: 10px; }
+  .free-item-row{
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f0fdf4;
+    border: 1px solid rgba(22,163,74,.12);
+  }
   .item-name{ font-weight: 900; color:#111827; }
   .item-qty{ font-size: 12px; color: rgba(17,24,39,.6); font-weight: 700; margin-top: 2px; }
   .item-total{ font-weight: 900; color:#16a34a; white-space: nowrap; }
+  .item-total.free{ color:#15803d; }
+  .free-item-tag{
+    display: inline-flex;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 11px;
+    font-weight: 800;
+  }
 
   .summary-divider{ height: 1px; background: rgba(0,0,0,.06); margin: 14px 0; }
   .summary-row{ display:flex; justify-content:space-between; margin-bottom: 8px; font-size: 14px; font-weight: 800; color: rgba(17,24,39,.8); }

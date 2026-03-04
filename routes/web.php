@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\Auth\CustomerAuthController;
+use App\Http\Controllers\Auth\CustomerForgotPasswordController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\GuestController;
@@ -23,10 +24,21 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [GuestController::class, 'landing']);
 
 // ================== CUSTOMER AUTH ==================
-Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [CustomerAuthController::class, 'login']);
-Route::get('/register', [CustomerAuthController::class, 'showRegister']);
-Route::post('/register', [CustomerAuthController::class, 'register']);
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [CustomerAuthController::class, 'login']);
+    Route::get('/register', [CustomerAuthController::class, 'showRegister']);
+    Route::post('/register', [CustomerAuthController::class, 'register']);
+    Route::get('/forgot-password', [CustomerForgotPasswordController::class, 'create'])->name('password.request');
+    Route::get('/forgot-password/check-email', [CustomerForgotPasswordController::class, 'notice'])->name('password.notice');
+    Route::post('/forgot-password', [CustomerForgotPasswordController::class, 'store'])
+        ->middleware('throttle:3,10')
+        ->name('password.email');
+    Route::get('/reset-password/{token}', [CustomerForgotPasswordController::class, 'edit'])->name('password.reset');
+    Route::post('/reset-password', [CustomerForgotPasswordController::class, 'update'])
+        ->middleware('throttle:5,10')
+        ->name('password.update');
+});
 Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
 
 // ================== PUBLIC PRODUCT BROWSING ==================
@@ -74,12 +86,14 @@ Route::middleware(['auth', 'customer'])->group(function () {
 });
 
 // ================== ADMIN AUTH ==================
-Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
-Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
+Route::middleware('guest:admin')->group(function () {
+    Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
+    Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
+});
 Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 
 // ================== ADMIN AREA ==================
-Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
+Route::prefix('admin')->middleware(['auth:admin', 'admin'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 

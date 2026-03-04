@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\PaymentConfirmation;
+use App\Services\FreeItemPromotionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -17,7 +18,7 @@ class CheckoutController extends Controller
     // Ongkir 10k hanya kalau "delivery"
     private const SHIPPING_DELIVERY = 10000;
 
-    public function index(Request $request)
+    public function index(Request $request, FreeItemPromotionService $promotionService)
     {
         $cart = $request->session()->get('cart', []);
 
@@ -31,14 +32,16 @@ class CheckoutController extends Controller
         $shippingMethod = $request->get('shipping_method', 'delivery');
 
         $summary = $this->calculateSummary($cart, $shippingMethod);
+        $promotion = $promotionService->evaluate($cart);
 
         return view('customer.checkout.index', [
             'cart' => $cart,
             'summary' => $summary,
+            'promotion' => $promotion,
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, FreeItemPromotionService $promotionService)
     {
         // Validasi dasar dulu
         $data = $request->validate([
@@ -84,6 +87,7 @@ class CheckoutController extends Controller
 
         // Hitung summary sesuai pilihan shipping_method
         $summary = $this->calculateSummary($cart, $data['shipping_method']);
+        $promotion = $promotionService->evaluate($cart);
 
         $order = Order::create([
             'user_id'          => Auth::id(),
@@ -110,6 +114,8 @@ class CheckoutController extends Controller
             \App\Models\Product::where('id', $item['id'])
                 ->decrement('stock', $item['quantity']);
         }
+
+        $promotionService->attachToOrder($order, $promotion);
 
         // Create payment record with PENDING status
         Payment::create([

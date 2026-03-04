@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Order;
+use App\Models\Rating;
+use App\Notifications\CustomerResetPasswordNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-
-// TAMBAHKAN INI
-use App\Models\Order;
-use App\Models\Rating;
 
 class User extends Authenticatable
 {
@@ -40,5 +39,10 @@ class User extends Authenticatable
     public function ratings()
     {
         return $this->hasMany(Rating::class);
+    }
+
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new CustomerResetPasswordNotification($token));
     }
 }

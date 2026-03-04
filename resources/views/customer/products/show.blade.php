@@ -82,6 +82,10 @@
         Rp {{ number_format($product->price ?? 0, 0, ',', '.') }}
       </div>
 
+      <div class="promo-inline">
+        Belanja minimal Rp 300.000, dapat gratis 1 Pancake Durian Mini otomatis saat checkout.
+      </div>
+
       <div class="pd-section">
         <div class="pd-label">Deskripsi</div>
         <div class="pd-text">
@@ -241,6 +245,17 @@
 </div>
 
 <style>
+  .promo-inline{
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #fff7e6;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    color: #8a5a00;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
   .pd-cart-guest{
     display: grid;
     gap: 12px;

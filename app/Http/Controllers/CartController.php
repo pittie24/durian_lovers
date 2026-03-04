@@ -3,18 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Services\FreeItemPromotionService;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, FreeItemPromotionService $promotionService)
     {
         $cart = $request->session()->get('cart', []);
         $summary = $this->calculateSummary($cart);
+        $promotion = $promotionService->evaluate($cart);
 
         return view('customer.cart.index', [
             'cart' => $cart,
             'summary' => $summary,
+            'promotion' => $promotion,
         ]);
     }
 

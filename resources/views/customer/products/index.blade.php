@@ -4,6 +4,13 @@
 
 @section('content')
 
+<section class="promo-banner">
+  <div class="promo-badge">Promo Free Item</div>
+  <div class="promo-copy">
+    Belanja minimal Rp 300.000, gratis 1 Pancake Durian Mini otomatis saat checkout.
+  </div>
+</section>
+
 <section class="section-heading split">
   <div>
     <h2 class="section-title">Produk Terlaris</h2>
@@ -96,6 +103,33 @@
 
 {{-- CSS khusus halaman ini (boleh dipindah ke app.css kalau mau) --}}
 <style>
+  .promo-banner{
+    display: grid;
+    gap: 8px;
+    margin-bottom: 18px;
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #fff6da, #fffdf4);
+    border: 1px solid rgba(180, 128, 23, 0.16);
+    box-shadow: 0 14px 28px rgba(180, 128, 23, 0.08);
+  }
+
+  .promo-badge{
+    width: fit-content;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #f59e0b;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .promo-copy{
+    color: #7c4a03;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
   /* Sticky kategori/tabs */
   .category-bar{
     position: sticky;
