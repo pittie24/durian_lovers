@@ -47,5 +47,5 @@
 </table>
 
 <div class="pagination-wrap">
-  {{ $customers->links() }}
+  {{ $customers->links('vendor.pagination.admin-customers') }}
 </div>

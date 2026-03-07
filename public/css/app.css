@@ -995,6 +995,43 @@
   .pagination-wrap{
     padding:12px 16px;
   }
+  .admin-page-nav{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+  }
+  .admin-page-link,
+  .admin-page-dots{
+    min-width:32px;
+    height:32px;
+    padding:0 10px;
+    border-radius:8px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    line-height:1;
+    text-decoration:none;
+  }
+  .admin-page-link{
+    border:1px solid #e5e7eb;
+    color:#374151;
+    background:#fff;
+  }
+  .admin-page-link:hover{
+    border-color:#cbd5e1;
+    background:#f8fafc;
+  }
+  .admin-page-link.is-active{
+    border-color:#2563eb;
+    background:#2563eb;
+    color:#fff;
+    font-weight:700;
+  }
+  .admin-page-dots{
+    color:#9ca3af;
+  }
   .table-clean tbody td:first-child{
     white-space:nowrap;
   }
